@@ -1,0 +1,59 @@
+/* VNTrade Global Styles */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg-deep:     #03080e;
+  --bg-base:     #060d16;
+  --bg-card:     #07111c;
+  --bg-hover:    #0c1e2e;
+  --border:      #0d1f2e;
+  --border-hi:   #1a3a50;
+  --text-primary:#dce8f0;
+  --text-muted:  #4a7a90;
+  --text-dim:    #1e3a4a;
+  --green:       #00d97e;
+  --red:         #ff4560;
+  --yellow:      #f0c040;
+  --blue:        #3b9eff;
+  --purple:      #b040e0;
+  --orange:      #ff9040;
+}
+
+html, body { height: 100%; }
+
+body {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Courier New', monospace;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#__next { height: 100%; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-hi); border-radius: 3px; }
+
+/* Button reset */
+button { font-family: inherit; }
+
+/* Utilities */
+.text-green  { color: var(--green); }
+.text-red    { color: var(--red); }
+.text-yellow { color: var(--yellow); }
+.text-blue   { color: var(--blue); }
+.text-muted  { color: var(--text-muted); }
+
+/* Animations */
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; box-shadow: 0 0 6px var(--green); }
+  50%       { opacity: 0.4; box-shadow: 0 0 2px var(--green); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.fade-in { animation: fadeIn 0.2s ease; }
