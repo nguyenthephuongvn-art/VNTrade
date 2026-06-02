@@ -190,6 +190,96 @@ function CustomTickerInput({ ticker, setTicker, sourceMap }) {
   );
 }
 
+
+// ── QUICK SEARCH — ô nhập mã cổ phiếu ────────────────────────────────────────
+function QuickSearch({ setTicker }) {
+  const [val, setVal] = useState("");
+  const [suggestions, setSuggestions] = useState([]);
+
+  const allTickers = Object.keys(STOCKS);
+
+  const handleChange = (e) => {
+    const v = e.target.value.toUpperCase();
+    setVal(v);
+    if (v.length >= 1) {
+      setSuggestions(
+        allTickers.filter(t => t.startsWith(v) || STOCKS[t].name.toUpperCase().includes(v)).slice(0, 8)
+      );
+    } else {
+      setSuggestions([]);
+    }
+  };
+
+  const handleSelect = (t) => {
+    setTicker(t);
+    setVal("");
+    setSuggestions([]);
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const t = val.trim().toUpperCase();
+    if (t.length >= 2) { handleSelect(t); }
+  };
+
+  return (
+    <div style={{ position: "relative" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", gap: 0 }}>
+        <input
+          value={val}
+          onChange={handleChange}
+          onBlur={() => setTimeout(() => setSuggestions([]), 200)}
+          placeholder="Nhập mã CK..."
+          maxLength={6}
+          style={{
+            padding: "6px 10px", fontSize: 12, width: 140,
+            background: "var(--bg-card)", border: "1px solid var(--border-hi)",
+            borderRight: "none", color: "var(--text-primary)",
+            borderRadius: "4px 0 0 4px", fontFamily: "inherit", outline: "none",
+          }}
+        />
+        <button type="submit" style={{
+          padding: "6px 12px", fontSize: 12, fontWeight: 700,
+          background: "var(--blue)", color: "#0a0e1a",
+          border: "none", borderRadius: "0 4px 4px 0",
+          cursor: "pointer", fontFamily: "inherit",
+        }}>→</button>
+      </form>
+
+      {/* Dropdown gợi ý */}
+      {suggestions.length > 0 && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, right: 0, zIndex: 200,
+          background: "#111828", border: "1px solid var(--border-hi)",
+          borderRadius: 4, boxShadow: "0 8px 24px #00000099",
+          marginTop: 2,
+        }}>
+          {suggestions.map(t => (
+            <div key={t}
+              onMouseDown={() => handleSelect(t)}
+              style={{
+                padding: "7px 12px", cursor: "pointer", fontSize: 11,
+                display: "flex", justifyContent: "space-between", alignItems: "center",
+                borderBottom: "1px solid var(--border)",
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
+            >
+              <span style={{ color: "var(--blue)", fontWeight: 700 }}>{t}</span>
+              <span style={{ color: "var(--text-muted)", fontSize: 10 }}>
+                {STOCKS[t]?.name?.slice(0, 22)}
+              </span>
+              <span style={{ color: "var(--text-dim)", fontSize: 10 }}>
+                {STOCKS[t]?.exchange}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── CHART VIEW ────────────────────────────────────────────────────────────────
 function ChartView({ ticker, setTicker, sourceMap }) {
   const { data, source, error } = useStockData(ticker);
@@ -199,6 +289,7 @@ function ChartView({ ticker, setTicker, sourceMap }) {
   const [showMACD, setShowMACD] = useState(false);
   const [showVPA,  setShowVPA]  = useState(false);
   const [showMCDX, setShowMCDX] = useState(false);
+  const [hoverCandle, setHoverCandle] = useState(null); // cây nến đang hover
 
   const ema20   = calcEMA(data, 20);
   const ema50   = calcEMA(data, 50);
@@ -222,60 +313,75 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
   return (
     <div className="fade-in">
-      {/* Ticker header */}
-      <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10, flexWrap: "wrap", gap: 8 }}>
-        <div>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>{ticker}</span>
-            <Badge source={source} />
-            <span style={{ fontSize: 28, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
-              {last.close?.toFixed(2) ?? "—"}
-            </span>
-            <span style={{ fontSize: 13, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
-              {chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(2)}%
-            </span>
-          </div>
-          <div style={{ fontSize: 11, color: "var(--text-sub)", marginTop: 2 }}>
-            {STOCKS[ticker]?.name} · {STOCKS[ticker]?.exchange} · {STOCKS[ticker]?.sector}
-          </div>
-          {error && (
-            <div style={{ fontSize: 10, color: "var(--yellow)", marginTop: 2 }}>
-              ⚠ TCBS offline — dùng mock data
-            </div>
+      {/* ══ COMPACT TOP BAR ══ */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 6, marginBottom: 5,
+        borderBottom: "1px solid var(--border)", paddingBottom: 5,
+      }}>
+        {/* LEFT: Mã + giá + thông tin ngang */}
+        <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>{ticker}</span>
+          <Badge source={source} />
+          <span style={{ fontSize: 20, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
+            {last.close?.toFixed(2) ?? "—"}
+          </span>
+          <span style={{ fontSize: 11, color: chg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+            {chg >= 0 ? "▲" : "▼"}{Math.abs(chg).toFixed(2)}%
+          </span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
+            {STOCKS[ticker]?.name?.slice(0,20) ?? ticker}
+          </span>
+          <span style={{ fontSize: 10, color: "var(--text-dim)" }}>
+            {STOCKS[ticker]?.exchange} · {STOCKS[ticker]?.sector}
+          </span>
+        </div>
+        {/* RIGHT: Quick search */}
+        <QuickSearch setTicker={setTicker} />
+      </div>
+
+      {/* ══ TOGGLES + OHLCV INFO — 1 hàng ngang ══ */}
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "space-between",
+        flexWrap: "wrap", gap: 4, marginBottom: 4,
+      }}>
+        {/* Toggles */}
+        <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
+          <ToggleBtn label="EMA"    active={showEMA}  color="var(--yellow)" onClick={() => setShowEMA(p=>!p)} />
+          <ToggleBtn label="Vol"    active={showVol}  color="var(--blue)"   onClick={() => setShowVol(p=>!p)} />
+          <ToggleBtn label="RSI"    active={showRSI}  color="var(--purple)" onClick={() => setShowRSI(p=>!p)} />
+          <ToggleBtn label="MACD"   active={showMACD} color="var(--blue)"   onClick={() => setShowMACD(p=>!p)} />
+          <ToggleBtn label="VPA"    active={showVPA}  color="var(--green)"  onClick={() => setShowVPA(p=>!p)} />
+          <ToggleBtn label="MCDX"   active={showMCDX} color="var(--orange)" onClick={() => setShowMCDX(p=>!p)} />
+        </div>
+        {/* OHLCV inline — không cần ô, chỉ chữ */}
+        <div style={{ display: "flex", gap: 10, fontSize: 11, fontFamily: "monospace", alignItems: "center" }}>
+          <span style={{ color: "var(--text-muted)" }}>O</span>
+          <span style={{ color: "#e8f0f8" }}>{(hoverCandle || last).open?.toFixed(2)}</span>
+          <span style={{ color: "var(--green)" }}>H {(hoverCandle || last).high?.toFixed(2)}</span>
+          <span style={{ color: "var(--red)" }}>L {(hoverCandle || last).low?.toFixed(2)}</span>
+          <span style={{ color: chg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+            C {(hoverCandle || last).close?.toFixed(2)}
+          </span>
+          <span style={{ color: "var(--yellow)" }}>
+            V {((hoverCandle || last).volume/1e6)?.toFixed(2)}M
+          </span>
+          {hoverCandle && (
+            <span style={{ color: "var(--text-muted)", fontSize: 10 }}>{hoverCandle.date}</span>
+          )}
+          <span style={{ color: "var(--purple)", fontSize: 10 }}>RSI {rsiVal?.toFixed(1)}</span>
+          {showEMA && (
+            <>
+              <span style={{ color: "var(--yellow)", fontSize: 10 }}>EMA20 {ema20[ema20.length-1]?.toFixed(0)}</span>
+              <span style={{ color: "var(--blue)", fontSize: 10 }}>EMA50 {ema50[ema50.length-1]?.toFixed(0)}</span>
+            </>
           )}
         </div>
-
-        {/* Toggles */}
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          <ToggleBtn label="EMA20/50" active={showEMA}  color="var(--yellow)" onClick={() => setShowEMA(p=>!p)} />
-          <ToggleBtn label="Volume"   active={showVol}  color="var(--blue)" onClick={() => setShowVol(p=>!p)} />
-          <ToggleBtn label="RSI"      active={showRSI}  color="var(--purple)" onClick={() => setShowRSI(p=>!p)} />
-          <ToggleBtn label="MACD"     active={showMACD} color="var(--blue)" onClick={() => setShowMACD(p=>!p)} />
-          <ToggleBtn label="VPA Score" active={showVPA} color="var(--green)" onClick={() => setShowVPA(p=>!p)} />
-          <ToggleBtn label="MCDX Banker" active={showMCDX} color="var(--orange)" onClick={() => setShowMCDX(p=>!p)} />
-        </div>
       </div>
 
-      {/* Stats */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5, marginBottom: 8 }}>
-        <StatCard label="Open"    value={last.open?.toFixed(2) ?? "—"} />
-        <StatCard label="High"    value={last.high?.toFixed(2) ?? "—"} color="var(--green)" />
-        <StatCard label="Low"     value={last.low?.toFixed(2)  ?? "—"} color="var(--red)" />
-        <StatCard label="Vol"     value={last.volume ? (last.volume/1e6).toFixed(2)+"M" : "—"} color="var(--yellow)" />
-        <StatCard label="RSI(14)" value={rsiVal?.toFixed(1) ?? "—"}
-          color={rsiVal > 70 ? "var(--red)" : rsiVal < 30 ? "var(--green)" : "var(--purple)"} />
-        <StatCard label="VPA"
-          value={vpaScores.length ? vpaScores[vpaScores.length-1] : "—"}
-          color={vpaScores.slice(-1)[0] >= 13 ? "var(--green)" : vpaScores.slice(-1)[0] <= 7 ? "var(--red)" : "var(--yellow)"} />
-      </div>
+      {/* Stats moved to inline bar above */}
 
-      {/* EMA legend */}
-      {showEMA && (
-        <div style={{ fontSize: 10, display: "flex", gap: 16, marginBottom: 5 }}>
-          <span style={{ color: "var(--yellow)" }}>─ EMA20: {ema20[ema20.length-1]?.toFixed(2)}</span>
-          <span style={{ color: "var(--blue)" }}>─ EMA50: {ema50[ema50.length-1]?.toFixed(2)}</span>
-        </div>
-      )}
+
 
       {/* VSA signals panel */}
       {showVPA && lastVSA && (lastVSA.bullish.length > 0 || lastVSA.bearish.length > 0) && (
@@ -298,7 +404,7 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
       {/* Charts */}
       <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "10px 6px 2px", marginBottom: 5 }}>
-        <CandlestickChart data={data} ema20={ema20} ema50={ema50} ema200={ema200} showEMA={showEMA} showVolume={showVol} height={showVol ? 360 : 300} ticker={ticker} />
+        <CandlestickChart data={data} ema20={ema20} ema50={ema50} ema200={ema200} showEMA={showEMA} showVolume={showVol} height={showVol ? 360 : 300} ticker={ticker} onHover={setHoverCandle} />
       </div>
 
       {showRSI && (
@@ -707,25 +813,41 @@ export default function Home() {
             <span style={{ fontSize: 14, color: "var(--green)" }}>TRADE</span>
           </div>
 
-          {/* VN-Index */}
-          <div style={{ fontSize: 12, flexShrink: 0 }}>
-            <span style={{ color: "var(--text-sub)" }}>VN-Index </span>
+          {/* VN-Index + giá nhanh 5 mã */}
+          <div style={{ fontSize: 11, flexShrink: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
+            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>VNINDEX</span>
             <span style={{ color: "#fff", fontWeight: 700 }}>{vnLast?.close.toFixed(2) ?? "···"}</span>
             {vnLast && (
-              <span style={{ color: vnChg >= 0 ? "var(--green)" : "var(--red)", marginLeft: 6 }}>
+              <span style={{ color: vnChg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
                 {vnChg >= 0 ? "▲" : "▼"}{Math.abs(vnChg).toFixed(2)}%
               </span>
             )}
             <Badge source={vnSource} />
+            <span style={{ color: "var(--border-hi)" }}>│</span>
+            {["FPT","VCB","HPG","BID","DGC"].map(t => {
+              const d = stockCache[t];
+              if (!d || d.length < 2) return null;
+              const la = d[d.length-1], pv = d[d.length-2];
+              const ch = ((la.close-pv.close)/pv.close)*100;
+              return (
+                <button key={t} onClick={() => { setNav("chart"); }}
+                  style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", display:"flex", gap:3, alignItems:"center" }}>
+                  <span style={{ color:"var(--text-muted)", fontSize:10 }}>{t}</span>
+                  <span style={{ color: ch>=0?"var(--green)":"var(--red)", fontSize:11, fontWeight:700 }}>
+                    {(la.close/1000).toFixed(1)}k
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
           {/* Nav */}
           <nav style={{ display: "flex", gap: 2 }}>
-            <NavBtn id="chart"    label="📈 Chart"    active={nav === "chart"}    onClick={setNav} />
-            <NavBtn id="watchlist"label="⭐ Watchlist" active={nav === "watchlist"} onClick={setNav} />
-            <NavBtn id="screener" label="🔍 Screener"  active={nav === "screener"}  onClick={setNav} />
-            <NavBtn id="scanner"  label="🎯 4 Danh Mục" active={nav === "scanner"}  onClick={setNav} />
-            <NavBtn id="news"     label="📰 Tin tức"  active={nav === "news"}     onClick={setNav} />
+            <NavBtn id="chart"    label="Chart"     active={nav === "chart"}    onClick={setNav} />
+            <NavBtn id="watchlist"label="Watchlist"  active={nav === "watchlist"} onClick={setNav} />
+            <NavBtn id="screener" label="Screener"   active={nav === "screener"}  onClick={setNav} />
+            <NavBtn id="scanner"  label="Scanner"    active={nav === "scanner"}  onClick={setNav} />
+            <NavBtn id="news"     label="Tin tức"   active={nav === "news"}     onClick={setNav} />
           </nav>
         </header>
 

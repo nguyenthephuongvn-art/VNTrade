@@ -14,7 +14,7 @@ const VISIBLE = 120;
 export default function CandlestickChart({
   data = [], ema20 = [], ema50 = [], ema200 = [],
   showEMA = true, showVolume = true, height = 380,
-  ticker = "",
+  ticker = "", onHover = null,
 }) {
   const canvasRef = useRef(null);
   const [tooltip, setTooltip] = useState(null);
@@ -187,15 +187,16 @@ export default function CandlestickChart({
     const i    = Math.floor((mx - 6) / step);
     if (i >= 0 && i < visible.length) {
       setTooltip({ d: visible[i], x: e.clientX - rect.left, y: e.clientY - rect.top });
+      if (onHover) onHover(visible[i]);
     }
-  }, [visible]);
+  }, [visible, onHover]);
 
   return (
     <div style={{ position: "relative", background: "#0a0e1a" }}>
       <canvas
         ref={canvasRef} width={800} height={height}
         style={{ width: "100%", height, display: "block", cursor: "crosshair" }}
-        onMouseMove={onMouseMove} onMouseLeave={() => setTooltip(null)}
+        onMouseMove={onMouseMove} onMouseLeave={() => { setTooltip(null); if (onHover) onHover(null); }}
       />
       {tooltip && (
         <div style={{
