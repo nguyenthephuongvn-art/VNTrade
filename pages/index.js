@@ -202,6 +202,7 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
   const ema20   = calcEMA(data, 20);
   const ema50   = calcEMA(data, 50);
+  const ema200  = calcEMA(data, 200);
   const rsi     = calcRSI(data);
   const macd    = calcMACD(data);
   const vpaScores = showVPA ? calcCompositeScore(data) : [];
@@ -297,7 +298,7 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
       {/* Charts */}
       <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "10px 6px 2px", marginBottom: 5 }}>
-        <CandlestickChart data={data} ema20={ema20} ema50={ema50} showEMA={showEMA} showVolume={showVol} height={showVol ? 340 : 280} />
+        <CandlestickChart data={data} ema20={ema20} ema50={ema50} ema200={ema200} showEMA={showEMA} showVolume={showVol} height={showVol ? 360 : 300} ticker={ticker} />
       </div>
 
       {showRSI && (
