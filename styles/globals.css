@@ -1,0 +1,104 @@
+/* VNTrade — Bloomberg Navy Theme */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Navy backgrounds — Bloomberg style */
+  --bg-deep:     #0a0e1a;
+  --bg-base:     #0d1220;
+  --bg-card:     #111828;
+  --bg-hover:    #192236;
+  --bg-input:    #0f1520;
+
+  /* Borders */
+  --border:      #1e2d45;
+  --border-hi:   #2a4060;
+  --border-act:  #3a6090;
+
+  /* Text */
+  --text-primary: #e8f0f8;
+  --text-sub:     #7a9ab8;
+  --text-muted:   #3a5878;
+  --text-dim:     #1e3048;
+
+  /* Signal colors — rực hơn trên nền navy */
+  --green:   #00e676;
+  --red:     #ff3d57;
+  --yellow:  #ffd740;
+  --blue:    #448aff;
+  --purple:  #d050ff;
+  --orange:  #ff9100;
+  --cyan:    #00e5ff;
+  --teal:    #1de9b6;
+
+  /* Chart candle */
+  --bull: #00e676;
+  --bear: #ff3d57;
+}
+
+html, body { height: 100%; }
+body {
+  font-family: 'IBM Plex Mono', 'JetBrains Mono', 'Consolas', monospace;
+  background: var(--bg-deep);
+  color: var(--text-primary);
+  font-size: 13px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+#__next { height: 100%; }
+
+/* Scrollbar — navy style */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--bg-base); }
+::-webkit-scrollbar-thumb { background: var(--border-act); border-radius: 2px; }
+
+/* Selection */
+::selection { background: #448aff30; color: #e8f0f8; }
+
+/* Animations */
+@keyframes pulse-live {
+  0%, 100% { opacity: 1; box-shadow: 0 0 8px var(--green); }
+  50%       { opacity: 0.5; box-shadow: 0 0 3px var(--green); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(3px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+.fade-in { animation: fadeIn 0.18s ease; }
+
+/* Bloomberg-style table */
+table { border-collapse: collapse; width: 100%; }
+th { 
+  font-size: 10px; 
+  letter-spacing: 0.8px; 
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 600;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+td {
+  padding: 7px 10px;
+  border-bottom: 1px solid #0d1828;
+  font-size: 12px;
+}
+tr:hover td { background: var(--bg-hover); }
+
+/* Input/Select reset */
+select, input {
+  font-family: inherit;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+  border-radius: 3px;
+  outline: none;
+  font-size: 11px;
+}
+select:focus, input:focus {
+  border-color: var(--border-act);
+}
+button { font-family: inherit; }

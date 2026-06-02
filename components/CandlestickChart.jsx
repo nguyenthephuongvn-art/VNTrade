@@ -40,10 +40,10 @@ export default function CandlestickChart({
     ctx.setLineDash([2, 5]);
     for (let g = 0; g <= 5; g++) {
       const y = (g / 5) * H;
-      ctx.strokeStyle = "#0d1f2e"; ctx.lineWidth = 1;
+      ctx.strokeStyle = "#1e2d45"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(W - padR, y); ctx.stroke();
       const price = maxP - (g / 5) * pRange;
-      ctx.fillStyle = "#2a5060";
+      ctx.fillStyle = "#3a5878";
       ctx.font = "10px 'IBM Plex Mono',monospace";
       ctx.textAlign = "left";
       ctx.fillText(price.toFixed(1), W - padR + 4, y + 4);
@@ -53,8 +53,8 @@ export default function CandlestickChart({
     // EMA lines
     if (showEMA) {
       [
-        [vEma20, "#f0c040"],
-        [vEma50, "#40a0f0"],
+        [vEma20, "#ffd740"],
+        [vEma50, "#448aff"],
       ].forEach(([arr, color]) => {
         ctx.beginPath();
         ctx.strokeStyle = color;
@@ -75,7 +75,7 @@ export default function CandlestickChart({
       const cx   = padL + i * step + step / 2;
       const x    = padL + i * step + (step - cW) / 2;
       const bull = d.close >= d.open;
-      const col  = bull ? "#00d97e" : "#ff4560";
+      const col  = bull ? "#00e676" : "#ff3d57";
       const bTop = py(Math.max(d.open, d.close));
       const bBot = py(Math.min(d.open, d.close));
       const bH   = Math.max(1, bBot - bTop);
@@ -97,16 +97,16 @@ export default function CandlestickChart({
         const x    = padL + i * step + (step - cW) / 2;
         const bull = d.close >= d.open;
         const bH   = (d.volume / maxV) * (volH - 10);
-        ctx.fillStyle = bull ? "#00d97e35" : "#ff456035";
+        ctx.fillStyle = bull ? "#00e67635" : "#ff3d5735";
         ctx.fillRect(x, vBase + (volH - 10 - bH), cW, bH);
       });
-      ctx.fillStyle = "#1a3a50"; ctx.font = "9px 'IBM Plex Mono',monospace";
+      ctx.fillStyle = "#2a4060"; ctx.font = "9px 'IBM Plex Mono',monospace";
       ctx.textAlign = "left";
       ctx.fillText("VOL", padL + 4, H + 20);
     }
 
     // Date labels
-    ctx.fillStyle = "#2a5060"; ctx.font = "9px 'IBM Plex Mono',monospace";
+    ctx.fillStyle = "#3a5878"; ctx.font = "9px 'IBM Plex Mono',monospace";
     ctx.textAlign = "center";
     [0, 18, 36, 54, 72, 89].forEach((i) => {
       if (visible[i]) {
@@ -150,8 +150,8 @@ export default function CandlestickChart({
             position: "fixed",
             left: Math.min(tooltip.clientX + 14, window.innerWidth - 160),
             top:  tooltip.clientY - 80,
-            background: "#05101aee",
-            border: "1px solid #1a3a50",
+            background: "#111828ee",
+            border: "1px solid #2a4060",
             borderRadius: 6,
             padding: "8px 12px",
             fontSize: 11,
@@ -166,12 +166,12 @@ export default function CandlestickChart({
         >
           <div style={{ color: "#3a6a80", marginBottom: 2 }}>{tooltip.d.date}</div>
           <div>O <b>{tooltip.d.open.toFixed(2)}</b></div>
-          <div style={{ color: "#00d97e" }}>H <b>{tooltip.d.high.toFixed(2)}</b></div>
-          <div style={{ color: "#ff4560" }}>L <b>{tooltip.d.low.toFixed(2)}</b></div>
-          <div style={{ color: tooltip.d.close >= tooltip.d.open ? "#00d97e" : "#ff4560" }}>
+          <div style={{ color: "#00e676" }}>H <b>{tooltip.d.high.toFixed(2)}</b></div>
+          <div style={{ color: "#ff3d57" }}>L <b>{tooltip.d.low.toFixed(2)}</b></div>
+          <div style={{ color: tooltip.d.close >= tooltip.d.open ? "#00e676" : "#ff3d57" }}>
             C <b>{tooltip.d.close.toFixed(2)}</b>
           </div>
-          <div style={{ color: "#f0c040" }}>
+          <div style={{ color: "#ffd740" }}>
             Vol <b>{(tooltip.d.volume / 1e6).toFixed(2)}M</b>
           </div>
         </div>

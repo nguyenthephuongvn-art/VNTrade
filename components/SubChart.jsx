@@ -14,19 +14,19 @@ export function RSIChart({ rsi = [], height = 80 }) {
     const full = rsi.slice(-90);
 
     // Zone fills
-    ctx.fillStyle = "#ff456010";
+    ctx.fillStyle = "#ff3d5710";
     ctx.fillRect(pL, 0, W - pL - pR, H * (1 - 70 / 100));
-    ctx.fillStyle = "#00d97e10";
+    ctx.fillStyle = "#00e67610";
     ctx.fillRect(pL, H * (1 - 30 / 100), W - pL - pR, H * (30 / 100));
 
     // Lines 30 / 50 / 70
     ctx.setLineDash([2, 4]);
     [30, 50, 70].forEach((v) => {
       const y = H - (v / 100) * H;
-      ctx.strokeStyle = v === 50 ? "#0d1f2e" : "#ff456030";
+      ctx.strokeStyle = v === 50 ? "#1e2d45" : "#ff3d5730";
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-      ctx.fillStyle = "#2a5060";
+      ctx.fillStyle = "#3a5878";
       ctx.font = "9px 'IBM Plex Mono',monospace";
       ctx.textAlign = "left";
       ctx.fillText(v, W - pR + 4, y + 4);
@@ -34,7 +34,7 @@ export function RSIChart({ rsi = [], height = 80 }) {
     ctx.setLineDash([]);
 
     // RSI line
-    ctx.beginPath(); ctx.strokeStyle = "#b040e0"; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.strokeStyle = "#d050ff"; ctx.lineWidth = 1.5;
     let s = false;
     full.forEach((v, i) => {
       if (!v) return;
@@ -48,7 +48,7 @@ export function RSIChart({ rsi = [], height = 80 }) {
     ctx.fillStyle = "#1e3040"; ctx.font = "9px 'IBM Plex Mono',monospace"; ctx.textAlign = "left";
     ctx.fillText("RSI(14)", pL + 4, 12);
     if (last != null) {
-      const col = last > 70 ? "#ff4560" : last < 30 ? "#00d97e" : "#b040e0";
+      const col = last > 70 ? "#ff3d57" : last < 30 ? "#00e676" : "#d050ff";
       ctx.fillStyle = col; ctx.font = "bold 10px 'IBM Plex Mono',monospace";
       ctx.textAlign = "right"; ctx.fillText(last.toFixed(1), W - pR - 4, 12);
     }
@@ -86,7 +86,7 @@ export function MACDChart({ macd = {}, height = 80 }) {
     const zY   = py(0);
 
     // Zero line
-    ctx.strokeStyle = "#0d1f2e"; ctx.lineWidth = 1;
+    ctx.strokeStyle = "#1e2d45"; ctx.lineWidth = 1;
     ctx.beginPath(); ctx.moveTo(pL, zY); ctx.lineTo(W - pR, zY); ctx.stroke();
 
     // Histogram bars
@@ -96,12 +96,12 @@ export function MACDChart({ macd = {}, height = 80 }) {
       const bW  = step * 0.7;
       const top = Math.min(py(v), zY);
       const bH  = Math.abs(py(v) - zY);
-      ctx.fillStyle = v >= 0 ? "#00d97e60" : "#ff456060";
+      ctx.fillStyle = v >= 0 ? "#00e67660" : "#ff3d5760";
       ctx.fillRect(x, top, bW, Math.max(1, bH));
     });
 
     // MACD & Signal lines
-    [[ml, "#3b9eff"], [sig, "#ff9040"]].forEach(([arr, col]) => {
+    [[ml, "#448aff"], [sig, "#ff9100"]].forEach(([arr, col]) => {
       ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = 1.5;
       let s = false;
       arr.forEach((v, i) => {
@@ -115,8 +115,8 @@ export function MACDChart({ macd = {}, height = 80 }) {
     // Labels
     ctx.fillStyle = "#1e3040"; ctx.font = "9px 'IBM Plex Mono',monospace"; ctx.textAlign = "left";
     ctx.fillText("MACD(12,26,9)", pL + 4, 12);
-    ctx.fillStyle = "#3b9eff"; ctx.fillText("─ MACD", pL + 90, 12);
-    ctx.fillStyle = "#ff9040"; ctx.fillText("─ Signal", pL + 148, 12);
+    ctx.fillStyle = "#448aff"; ctx.fillText("─ MACD", pL + 90, 12);
+    ctx.fillStyle = "#ff9100"; ctx.fillText("─ Signal", pL + 148, 12);
   }, [macd, height]);
 
   return (
@@ -144,16 +144,16 @@ export function VPAScoreChart({ scores = [], height = 80 }) {
 
     // Zone fills: 0-7 bear, 7-13 neutral, 13-20 bull
     const py = (v) => H - (v / 20) * H;
-    ctx.fillStyle = "#ff456012"; ctx.fillRect(pL, py(7), W - pL - pR, py(0) - py(7));
-    ctx.fillStyle = "#00d97e12"; ctx.fillRect(pL, py(20), W - pL - pR, py(13) - py(20));
+    ctx.fillStyle = "#ff3d5712"; ctx.fillRect(pL, py(7), W - pL - pR, py(0) - py(7));
+    ctx.fillStyle = "#00e67612"; ctx.fillRect(pL, py(20), W - pL - pR, py(13) - py(20));
 
     // Grid lines
     ctx.setLineDash([2, 4]);
     [5, 10, 15].forEach((v) => {
       const y = py(v);
-      ctx.strokeStyle = "#0d1f2e"; ctx.lineWidth = 1;
+      ctx.strokeStyle = "#1e2d45"; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-      ctx.fillStyle = "#2a5060"; ctx.font = "9px 'IBM Plex Mono',monospace";
+      ctx.fillStyle = "#3a5878"; ctx.font = "9px 'IBM Plex Mono',monospace";
       ctx.textAlign = "left"; ctx.fillText(v, W - pR + 4, y + 4);
     });
     ctx.setLineDash([]);
@@ -163,7 +163,7 @@ export function VPAScoreChart({ scores = [], height = 80 }) {
       if (v == null) return;
       const x   = pL + i * step + step * 0.1;
       const bW  = step * 0.8;
-      const col = v >= 13 ? "#00d97e" : v <= 7 ? "#ff4560" : "#f0c040";
+      const col = v >= 13 ? "#00e676" : v <= 7 ? "#ff3d57" : "#ffd740";
       ctx.fillStyle = col + "90";
       ctx.fillRect(x, py(v), bW, py(0) - py(v));
     });
@@ -172,11 +172,94 @@ export function VPAScoreChart({ scores = [], height = 80 }) {
     ctx.textAlign = "left"; ctx.fillText("VPA Score (0–20)", pL + 4, 12);
     const last = vis.filter(v => v != null).slice(-1)[0];
     if (last != null) {
-      const col = last >= 13 ? "#00d97e" : last <= 7 ? "#ff4560" : "#f0c040";
+      const col = last >= 13 ? "#00e676" : last <= 7 ? "#ff3d57" : "#ffd740";
       ctx.fillStyle = col; ctx.font = "bold 11px 'IBM Plex Mono',monospace";
       ctx.textAlign = "right"; ctx.fillText(last, W - pR - 4, 13);
     }
   }, [scores, height]);
+
+  return (
+    <canvas
+      ref={ref}
+      width={760}
+      height={height}
+      style={{ width: "100%", height, display: "block" }}
+    />
+  );
+}
+
+// ── MCDX CHART ────────────────────────────────────────────────────────────────
+export function MCDXChart({ mcdx = [], height = 90 }) {
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const c = ref.current;
+    if (!c) return;
+    const ctx = c.getContext("2d");
+    const W = c.width, H = height;
+    ctx.clearRect(0, 0, W, H);
+    const pL = 4, pR = 56, n = 90;
+    const step = (W - pL - pR) / n;
+    const vis  = mcdx.slice(-n);
+
+    // Zone fills
+    ctx.fillStyle = "#00e67610";
+    ctx.fillRect(pL, 0, W - pL - pR, H * (1 - 70 / 100));
+    ctx.fillStyle = "#ff3d5710";
+    ctx.fillRect(pL, H * (1 - 30 / 100), W - pL - pR, H * (30 / 100));
+
+    // Lines 30 / 50 / 70
+    ctx.setLineDash([2, 4]);
+    [30, 50, 70].forEach(v => {
+      const y = H - (v / 100) * H;
+      ctx.strokeStyle = v === 50 ? "#1e2d45" : v === 70 ? "#00e67630" : "#ff3d5730";
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
+      ctx.fillStyle = "#3a5878";
+      ctx.font = "9px 'IBM Plex Mono',monospace";
+      ctx.textAlign = "left";
+      ctx.fillText(v, W - pR + 4, y + 4);
+    });
+    ctx.setLineDash([]);
+
+    // Gradient bars
+    vis.forEach((v, i) => {
+      if (v == null) return;
+      const x  = pL + i * step + step * 0.1;
+      const bW = step * 0.8;
+      const y  = H - (v / 100) * H;
+      // Color by zone
+      const col = v >= 70 ? "#00e676" : v <= 30 ? "#ff3d57" : "#448aff";
+      ctx.fillStyle = col + "70";
+      ctx.fillRect(x, y, bW, H - y);
+      // Top cap
+      ctx.fillStyle = col;
+      ctx.fillRect(x, y, bW, 2);
+    });
+
+    // MCDX line overlay
+    ctx.beginPath(); ctx.strokeStyle = "#ffd740"; ctx.lineWidth = 1.5;
+    let s = false;
+    vis.forEach((v, i) => {
+      if (v == null) return;
+      const x = pL + i * step + step / 2;
+      const y = H - (v / 100) * H;
+      s ? ctx.lineTo(x, y) : (ctx.moveTo(x, y), s = true);
+    });
+    ctx.stroke();
+
+    // Label + last value
+    const last = vis.filter(v => v != null).slice(-1)[0];
+    ctx.font = "9px 'IBM Plex Mono',monospace"; ctx.textAlign = "left";
+    ctx.fillStyle = "#3a5878"; ctx.fillText("MCDX Banker", pL + 4, 12);
+    if (last != null) {
+      const col  = last >= 70 ? "#00e676" : last <= 30 ? "#ff3d57" : "#448aff";
+      const lbl  = last >= 70 ? "ACCUMULATION" : last <= 30 ? "DISTRIBUTION" : "NEUTRAL";
+      ctx.fillStyle = col; ctx.font = "bold 10px 'IBM Plex Mono',monospace";
+      ctx.textAlign = "right";
+      ctx.fillText(`${last} · ${lbl}`, W - pR - 4, 12);
+    }
+  }, [mcdx, height]);
 
   return (
     <canvas

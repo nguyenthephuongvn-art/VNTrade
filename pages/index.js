@@ -49,17 +49,17 @@ function useStockData(ticker) {
 // ── SMALL COMPONENTS ──────────────────────────────────────────────────────────
 function Badge({ source }) {
   if (source === "loading") return (
-    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#1a3a5018", color: "#3a7a90" }}>
+    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#1a3a5018", color: "var(--text-sub)" }}>
       ···
     </span>
   );
   if (source === "tcbs" || source === "yahoo" || source === "vndirect") return (
-    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#00d97e15", color: "#00d97e" }}>
+    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#00d97e15", color: "var(--green)" }}>
       LIVE
     </span>
   );
   return (
-    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#f0c04015", color: "#f0c040" }}>
+    <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#f0c04015", color: "var(--yellow)" }}>
       MOCK
     </span>
   );
@@ -88,11 +88,11 @@ function Sparkline({ data, color }) {
 function StatCard({ label, value, color }) {
   return (
     <div style={{
-      background: "#06101a", border: "1px solid #0d1f2e", borderRadius: 5,
+      background: "var(--bg-card)", border: "1px solid #0d1f2e", borderRadius: 5,
       padding: "7px 9px", minWidth: 0,
     }}>
-      <div style={{ fontSize: 9, color: "#1e4050", marginBottom: 2 }}>{label}</div>
-      <div style={{ fontSize: 12, fontWeight: 700, color: color || "#dce8f0", whiteSpace: "nowrap" }}>{value}</div>
+      <div style={{ fontSize: 9, color: "var(--text-muted)", marginBottom: 2 }}>{label}</div>
+      <div style={{ fontSize: 12, fontWeight: 700, color: color || "var(--text-primary)", whiteSpace: "nowrap" }}>{value}</div>
     </div>
   );
 }
@@ -101,8 +101,8 @@ function NavBtn({ id, label, active, onClick }) {
   return (
     <button onClick={() => onClick(id)} style={{
       padding: "5px 11px", fontSize: 11, border: "none", borderRadius: 4,
-      background: active ? "#00d97e" : "transparent",
-      color: active ? "#03080e" : "#3a7a90",
+      background: active ? "var(--green)" : "transparent",
+      color: active ? "var(--bg-deep)" : "var(--text-sub)",
       cursor: "pointer", fontFamily: "inherit", fontWeight: active ? 700 : 400,
       transition: "all 0.12s",
     }}>
@@ -117,11 +117,76 @@ function ToggleBtn({ label, active, color, onClick }) {
       padding: "4px 9px", fontSize: 10, borderRadius: 4, cursor: "pointer",
       fontFamily: "inherit", transition: "all 0.12s",
       background: active ? color + "18" : "transparent",
-      color: active ? color : "#1e4050",
-      border: `1px solid ${active ? color + "50" : "#0d1f2e"}`,
+      color: active ? color : "var(--text-muted)",
+      border: `1px solid ${active ? color + "50" : "var(--border)"}`,
     }}>
       {label}
     </button>
+  );
+}
+
+
+// ── CUSTOM TICKER INPUT ────────────────────────────────────────────────────────
+function CustomTickerInput({ ticker, setTicker, sourceMap }) {
+  const [custom, setCustom] = useState("");
+  const allTickers = Object.keys(STOCKS);
+
+  const handleCustom = (e) => {
+    e.preventDefault();
+    const t = custom.trim().toUpperCase();
+    if (t.length >= 2 && t.length <= 5) {
+      setTicker(t);
+      setCustom("");
+    }
+  };
+
+  return (
+    <div style={{ marginTop: 12 }}>
+      {/* Custom input */}
+      <div style={{ display: "flex", gap: 6, marginBottom: 8, alignItems: "center" }}>
+        <span style={{ fontSize: 10, color: "var(--text-muted)", letterSpacing: 1 }}>TÌM MÃ:</span>
+        <form onSubmit={handleCustom} style={{ display: "flex", gap: 4 }}>
+          <input
+            value={custom}
+            onChange={e => setCustom(e.target.value.toUpperCase())}
+            placeholder="VD: HSG, DIG..."
+            maxLength={5}
+            style={{
+              padding: "4px 8px", fontSize: 11, width: 120,
+              background: "var(--bg-card)", border: "1px solid var(--border-hi)",
+              color: "var(--text-primary)", borderRadius: 3, fontFamily: "inherit",
+              outline: "none",
+            }}
+          />
+          <button type="submit" style={{
+            padding: "4px 10px", fontSize: 10, background: "var(--blue)",
+            color: "#0a0e1a", border: "none", borderRadius: 3,
+            cursor: "pointer", fontFamily: "inherit", fontWeight: 700,
+          }}>→</button>
+        </form>
+        <span style={{ fontSize: 10, color: "var(--text-dim)" }}>
+          (bất kỳ mã niêm yết trên Yahoo Finance .VN)
+        </span>
+      </div>
+      {/* Preset tickers */}
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+        {allTickers.map((t) => (
+          <button key={t} onClick={() => setTicker(t)} style={{
+            padding: "3px 7px", fontSize: 10, borderRadius: 3, cursor: "pointer",
+            fontFamily: "inherit", fontWeight: ticker === t ? 700 : 400,
+            background: ticker === t ? "var(--green)" : "var(--bg-card)",
+            color: ticker === t ? "#0a0e1a" : "var(--text-muted)",
+            border: `1px solid ${ticker === t ? "var(--green)" : "var(--border)"}`,
+            transition: "all 0.1s",
+          }}>
+            {t}
+            {sourceMap[t] === "yahoo" && ticker !== t && (
+              <span style={{ marginLeft: 2, fontSize: 7, color: "var(--green)" }}>●</span>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -162,18 +227,18 @@ function ChartView({ ticker, setTicker, sourceMap }) {
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
             <span style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>{ticker}</span>
             <Badge source={source} />
-            <span style={{ fontSize: 28, fontWeight: 700, color: chg >= 0 ? "#00d97e" : "#ff4560" }}>
+            <span style={{ fontSize: 28, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
               {last.close?.toFixed(2) ?? "—"}
             </span>
-            <span style={{ fontSize: 13, color: chg >= 0 ? "#00d97e" : "#ff4560" }}>
+            <span style={{ fontSize: 13, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
               {chg >= 0 ? "▲" : "▼"} {Math.abs(chg).toFixed(2)}%
             </span>
           </div>
-          <div style={{ fontSize: 11, color: "#2a5060", marginTop: 2 }}>
+          <div style={{ fontSize: 11, color: "var(--text-sub)", marginTop: 2 }}>
             {STOCKS[ticker]?.name} · {STOCKS[ticker]?.exchange} · {STOCKS[ticker]?.sector}
           </div>
           {error && (
-            <div style={{ fontSize: 10, color: "#f0c040", marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: "var(--yellow)", marginTop: 2 }}>
               ⚠ TCBS offline — dùng mock data
             </div>
           )}
@@ -181,33 +246,33 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
         {/* Toggles */}
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-          <ToggleBtn label="EMA20/50" active={showEMA}  color="#f0c040" onClick={() => setShowEMA(p=>!p)} />
-          <ToggleBtn label="Volume"   active={showVol}  color="#3b9eff" onClick={() => setShowVol(p=>!p)} />
-          <ToggleBtn label="RSI"      active={showRSI}  color="#b040e0" onClick={() => setShowRSI(p=>!p)} />
-          <ToggleBtn label="MACD"     active={showMACD} color="#3b9eff" onClick={() => setShowMACD(p=>!p)} />
-          <ToggleBtn label="VPA Score" active={showVPA} color="#00d97e" onClick={() => setShowVPA(p=>!p)} />
-          <ToggleBtn label="MCDX Banker" active={showMCDX} color="#ff9040" onClick={() => setShowMCDX(p=>!p)} />
+          <ToggleBtn label="EMA20/50" active={showEMA}  color="var(--yellow)" onClick={() => setShowEMA(p=>!p)} />
+          <ToggleBtn label="Volume"   active={showVol}  color="var(--blue)" onClick={() => setShowVol(p=>!p)} />
+          <ToggleBtn label="RSI"      active={showRSI}  color="var(--purple)" onClick={() => setShowRSI(p=>!p)} />
+          <ToggleBtn label="MACD"     active={showMACD} color="var(--blue)" onClick={() => setShowMACD(p=>!p)} />
+          <ToggleBtn label="VPA Score" active={showVPA} color="var(--green)" onClick={() => setShowVPA(p=>!p)} />
+          <ToggleBtn label="MCDX Banker" active={showMCDX} color="var(--orange)" onClick={() => setShowMCDX(p=>!p)} />
         </div>
       </div>
 
       {/* Stats */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(6, 1fr)", gap: 5, marginBottom: 8 }}>
         <StatCard label="Open"    value={last.open?.toFixed(2) ?? "—"} />
-        <StatCard label="High"    value={last.high?.toFixed(2) ?? "—"} color="#00d97e" />
-        <StatCard label="Low"     value={last.low?.toFixed(2)  ?? "—"} color="#ff4560" />
-        <StatCard label="Vol"     value={last.volume ? (last.volume/1e6).toFixed(2)+"M" : "—"} color="#f0c040" />
+        <StatCard label="High"    value={last.high?.toFixed(2) ?? "—"} color="var(--green)" />
+        <StatCard label="Low"     value={last.low?.toFixed(2)  ?? "—"} color="var(--red)" />
+        <StatCard label="Vol"     value={last.volume ? (last.volume/1e6).toFixed(2)+"M" : "—"} color="var(--yellow)" />
         <StatCard label="RSI(14)" value={rsiVal?.toFixed(1) ?? "—"}
-          color={rsiVal > 70 ? "#ff4560" : rsiVal < 30 ? "#00d97e" : "#b040e0"} />
+          color={rsiVal > 70 ? "var(--red)" : rsiVal < 30 ? "var(--green)" : "var(--purple)"} />
         <StatCard label="VPA"
           value={vpaScores.length ? vpaScores[vpaScores.length-1] : "—"}
-          color={vpaScores.slice(-1)[0] >= 13 ? "#00d97e" : vpaScores.slice(-1)[0] <= 7 ? "#ff4560" : "#f0c040"} />
+          color={vpaScores.slice(-1)[0] >= 13 ? "var(--green)" : vpaScores.slice(-1)[0] <= 7 ? "var(--red)" : "var(--yellow)"} />
       </div>
 
       {/* EMA legend */}
       {showEMA && (
         <div style={{ fontSize: 10, display: "flex", gap: 16, marginBottom: 5 }}>
-          <span style={{ color: "#f0c040" }}>─ EMA20: {ema20[ema20.length-1]?.toFixed(2)}</span>
-          <span style={{ color: "#40a0f0" }}>─ EMA50: {ema50[ema50.length-1]?.toFixed(2)}</span>
+          <span style={{ color: "var(--yellow)" }}>─ EMA20: {ema20[ema20.length-1]?.toFixed(2)}</span>
+          <span style={{ color: "var(--blue)" }}>─ EMA50: {ema50[ema50.length-1]?.toFixed(2)}</span>
         </div>
       )}
 
@@ -215,15 +280,15 @@ function ChartView({ ticker, setTicker, sourceMap }) {
       {showVPA && lastVSA && (lastVSA.bullish.length > 0 || lastVSA.bearish.length > 0) && (
         <div style={{
           display: "flex", gap: 8, marginBottom: 8, flexWrap: "wrap",
-          padding: "8px 10px", background: "#05101a", borderRadius: 6, border: "1px solid #0d1f2e",
+          padding: "8px 10px", background: "var(--bg-card)", borderRadius: 6, border: "1px solid #0d1f2e",
         }}>
           {lastVSA.bullish.map(s => (
-            <span key={s} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "#00d97e18", color: "#00d97e" }}>
+            <span key={s} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "#00d97e18", color: "var(--green)" }}>
               ▲ {s}
             </span>
           ))}
           {lastVSA.bearish.map(s => (
-            <span key={s} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "#ff456018", color: "#ff4560" }}>
+            <span key={s} style={{ fontSize: 11, padding: "2px 8px", borderRadius: 10, background: "#ff456018", color: "var(--red)" }}>
               ▼ {s}
             </span>
           ))}
@@ -256,18 +321,18 @@ function ChartView({ ticker, setTicker, sourceMap }) {
       {showMCDX && mcdxSignal && (
         <div style={{
           display: "flex", alignItems: "center", gap: 10, padding: "7px 12px",
-          background: "#05101a", border: "1px solid #0d1f2e", borderRadius: 7, marginBottom: 5,
+          background: "var(--bg-card)", border: "1px solid #0d1f2e", borderRadius: 7, marginBottom: 5,
         }}>
-          <span style={{ fontSize: 10, color: "#2a5060" }}>MCDX Banker Signal:</span>
+          <span style={{ fontSize: 10, color: "var(--text-sub)" }}>MCDX Banker Signal:</span>
           <span style={{
             fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 8,
             background: mcdxSignal.signal === "accumulation" ? "#00d97e20" : mcdxSignal.signal === "distribution" ? "#ff456020" : "#3b9eff20",
-            color:      mcdxSignal.signal === "accumulation" ? "#00d97e"   : mcdxSignal.signal === "distribution" ? "#ff4560"   : "#3b9eff",
+            color:      mcdxSignal.signal === "accumulation" ? "var(--green)"   : mcdxSignal.signal === "distribution" ? "var(--red)"   : "var(--blue)",
           }}>
             {mcdxSignal.signal === "accumulation" ? "▲ TÍCH LŨY" : mcdxSignal.signal === "distribution" ? "▼ PHÂN PHỐI" : "→ TRUNG TÍNH"}
           </span>
-          <span style={{ fontSize: 11, color: "#f0c040" }}>Score: {mcdxSignal.strength}</span>
-          <span style={{ fontSize: 10, color: "#1e4050", marginLeft: "auto" }}>
+          <span style={{ fontSize: 11, color: "var(--yellow)" }}>Score: {mcdxSignal.strength}</span>
+          <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>
             {mcdxSignal.signal === "accumulation" ? "Banker đang mua tích lũy" : mcdxSignal.signal === "distribution" ? "Banker đang bán phân phối" : "Chưa có tín hiệu rõ"}
           </span>
         </div>
@@ -285,13 +350,13 @@ function ChartView({ ticker, setTicker, sourceMap }) {
           <button key={t} onClick={() => setTicker(t)} style={{
             padding: "4px 8px", fontSize: 10, borderRadius: 4, cursor: "pointer",
             fontFamily: "inherit", fontWeight: ticker === t ? 700 : 400,
-            background: ticker === t ? "#00d97e" : "#05101a",
-            color: ticker === t ? "#03080e" : "#2a6070",
-            border: `1px solid ${ticker === t ? "#00d97e" : "#0d1f2e"}`,
+            background: ticker === t ? "var(--green)" : "var(--bg-card)",
+            color: ticker === t ? "var(--bg-deep)" : "var(--text-muted)",
+            border: `1px solid ${ticker === t ? "var(--green)" : "var(--border)"}`,
           }}>
             {t}
             {sourceMap[t] === "tcbs" && ticker !== t && (
-              <span style={{ marginLeft: 2, fontSize: 7, color: "#00d97e" }}>●</span>
+              <span style={{ marginLeft: 2, fontSize: 7, color: "var(--green)" }}>●</span>
             )}
           </button>
         ))}
@@ -304,14 +369,14 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 function WatchlistView({ watchlist, setWatchlist, stockCache, setActiveTicker, setNav }) {
   return (
     <div className="fade-in">
-      <div style={{ fontSize: 11, color: "#2a5060", marginBottom: 14 }}>
+      <div style={{ fontSize: 11, color: "var(--text-sub)", marginBottom: 14 }}>
         {watchlist.length} cổ phiếu
       </div>
 
       {watchlist.map((t) => {
         const d  = stockCache[t];
         if (!d || d.length < 2) return (
-          <div key={t} style={{ background: "#06101a", border: "1px solid #0d1f2e", borderRadius: 7, padding: 12, marginBottom: 7, color: "#1e4050", fontSize: 12 }}>
+          <div key={t} style={{ background: "var(--bg-card)", border: "1px solid #0d1f2e", borderRadius: 7, padding: 12, marginBottom: 7, color: "var(--text-muted)", fontSize: 12 }}>
             {t} — đang tải...
           </div>
         );
@@ -321,24 +386,24 @@ function WatchlistView({ watchlist, setWatchlist, stockCache, setActiveTicker, s
           <div key={t}
             onClick={() => { setActiveTicker(t); setNav("chart"); }}
             style={{
-              background: "#06101a", border: "1px solid #0d1f2e", borderRadius: 7,
+              background: "var(--bg-card)", border: "1px solid #0d1f2e", borderRadius: 7,
               padding: "11px 14px", marginBottom: 7, cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               transition: "border-color 0.12s",
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#1a3a50")}
-            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#0d1f2e")}
+            onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hi)")}
+            onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: "#fff" }}>{t}</div>
-                <div style={{ fontSize: 10, color: "#2a5060" }}>{STOCKS[t]?.exchange} · {STOCKS[t]?.sector}</div>
+                <div style={{ fontSize: 10, color: "var(--text-sub)" }}>{STOCKS[t]?.exchange} · {STOCKS[t]?.sector}</div>
               </div>
-              <Sparkline data={d} color={c >= 0 ? "#00d97e" : "#ff4560"} />
+              <Sparkline data={d} color={c >= 0 ? "var(--green)" : "var(--red)"} />
             </div>
             <div style={{ textAlign: "right" }}>
               <div style={{ fontSize: 15, fontWeight: 700, color: "#fff" }}>{la.close.toFixed(2)}</div>
-              <div style={{ fontSize: 12, color: c >= 0 ? "#00d97e" : "#ff4560", fontWeight: 600 }}>
+              <div style={{ fontSize: 12, color: c >= 0 ? "var(--green)" : "var(--red)", fontWeight: 600 }}>
                 {c >= 0 ? "▲" : "▼"} {Math.abs(c).toFixed(2)}%
               </div>
             </div>
@@ -348,12 +413,12 @@ function WatchlistView({ watchlist, setWatchlist, stockCache, setActiveTicker, s
 
       {/* Add stocks */}
       <div style={{ marginTop: 14 }}>
-        <div style={{ fontSize: 10, color: "#1e4050", marginBottom: 6, letterSpacing: 1 }}>THÊM CỔ PHIẾU</div>
+        <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 6, letterSpacing: 1 }}>THÊM CỔ PHIẾU</div>
         <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
           {Object.keys(STOCKS).filter((t) => !watchlist.includes(t)).map((t) => (
             <button key={t} onClick={() => setWatchlist((p) => [...p, t])} style={{
               padding: "4px 8px", fontSize: 10, background: "transparent",
-              color: "#2a5060", border: "1px dashed #0d1f2e", borderRadius: 4,
+              color: "var(--text-sub)", border: "1px dashed #0d1f2e", borderRadius: 4,
               cursor: "pointer", fontFamily: "inherit",
             }}>
               + {t}
@@ -411,13 +476,13 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
   useEffect(() => { run(); }, [run]);
 
   const selStyle = {
-    background: "#06101a", border: "1px solid #0d1f2e", color: "#a8c8d8",
+    background: "var(--bg-card)", border: "1px solid #0d1f2e", color: "var(--text-sub)",
     padding: "6px 10px", borderRadius: 4, fontSize: 11,
     fontFamily: "'IBM Plex Mono',monospace",
   };
 
-  const thStyle = { padding: "7px 10px", color: "#2a5060", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap", fontSize: 11 };
-  const tdStyle = (col) => ({ padding: "8px 10px", color: col || "#8ab8c8", fontSize: 11 });
+  const thStyle = { padding: "7px 10px", color: "var(--text-sub)", textAlign: "left", fontWeight: 600, whiteSpace: "nowrap", fontSize: 11 };
+  const tdStyle = (col) => ({ padding: "8px 10px", color: col || "var(--text-sub)", fontSize: 11 });
 
   return (
     <div className="fade-in">
@@ -428,7 +493,7 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
           { lb: "Ngành",  key: "sector",   opts: SECTORS },
         ].map((f) => (
           <div key={f.key}>
-            <div style={{ fontSize: 9, color: "#2a5060", marginBottom: 3, letterSpacing: 1 }}>{f.lb.toUpperCase()}</div>
+            <div style={{ fontSize: 9, color: "var(--text-sub)", marginBottom: 3, letterSpacing: 1 }}>{f.lb.toUpperCase()}</div>
             <select style={selStyle} value={filters[f.key]}
               onChange={(e) => setFilters((p) => ({ ...p, [f.key]: e.target.value }))}>
               {f.opts.map((o) => <option key={o}>{o}</option>)}
@@ -436,7 +501,7 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
           </div>
         ))}
         <div>
-          <div style={{ fontSize: 9, color: "#2a5060", marginBottom: 3, letterSpacing: 1 }}>VOL TỐI THIỂU</div>
+          <div style={{ fontSize: 9, color: "var(--text-sub)", marginBottom: 3, letterSpacing: 1 }}>VOL TỐI THIỂU</div>
           <select style={selStyle} value={filters.minVol}
             onChange={(e) => setFilters((p) => ({ ...p, minVol: +e.target.value }))}>
             {[[50000,"50K+"],[500000,"500K+"],[1000000,"1M+"],[5000000,"5M+"]].map(([v,l]) => (
@@ -445,7 +510,7 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
           </select>
         </div>
         <div>
-          <div style={{ fontSize: 9, color: "#2a5060", marginBottom: 3, letterSpacing: 1 }}>SẮP XẾP</div>
+          <div style={{ fontSize: 9, color: "var(--text-sub)", marginBottom: 3, letterSpacing: 1 }}>SẮP XẾP</div>
           <select style={selStyle} value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
             {[["vol","Volume"],["chg","% Thay đổi"],["rsi","RSI"],["vpa","VPA Score"]].map(([v,l]) => (
               <option key={v} value={v}>{l}</option>
@@ -454,14 +519,14 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
         </div>
         <div style={{ display: "flex", alignItems: "flex-end" }}>
           <button onClick={run} style={{
-            background: "#00d97e", color: "#03080e", border: "none",
+            background: "var(--green)", color: "var(--bg-deep)", border: "none",
             padding: "8px 16px", borderRadius: 4, cursor: "pointer",
             fontFamily: "inherit", fontWeight: 700, fontSize: 11,
           }}>⚡ Lọc</button>
         </div>
       </div>
 
-      <div style={{ fontSize: 10, color: "#1e4050", marginBottom: 8 }}>
+      <div style={{ fontSize: 10, color: "var(--text-muted)", marginBottom: 8 }}>
         {results.length} kết quả · Click vào hàng để mở chart
       </div>
 
@@ -478,33 +543,33 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
             {results.map((r, i) => (
               <tr key={r.ticker}
                 onClick={() => { setActiveTicker(r.ticker); setNav("chart"); }}
-                style={{ borderBottom: "1px solid #07111a", background: i % 2 === 0 ? "#04090e" : "transparent", cursor: "pointer" }}
-                onMouseEnter={(e) => (e.currentTarget.style.background = "#0a1a28")}
-                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "#04090e" : "transparent")}>
+                style={{ borderBottom: "1px solid #07111a", background: i % 2 === 0 ? "var(--bg-deep)" : "transparent", cursor: "pointer" }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = "var(--bg-hover)")}
+                onMouseLeave={(e) => (e.currentTarget.style.background = i % 2 === 0 ? "var(--bg-deep)" : "transparent")}>
                 <td style={{ ...tdStyle(), color: "#5aaeff", fontWeight: 700 }}>{r.ticker}</td>
                 <td style={tdStyle()}>{r.sector}</td>
-                <td style={{ ...tdStyle(), color: "#1e4050" }}>{r.exchange}</td>
+                <td style={{ ...tdStyle(), color: "var(--text-muted)" }}>{r.exchange}</td>
                 <td style={{ ...tdStyle(), color: "#fff", fontWeight: 600 }}>{r.close.toFixed(2)}</td>
-                <td style={{ ...tdStyle(), color: r.chg >= 0 ? "#00d97e" : "#ff4560", fontWeight: 700 }}>
+                <td style={{ ...tdStyle(), color: r.chg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
                   {r.chg >= 0 ? "▲" : "▼"}{Math.abs(r.chg).toFixed(2)}%
                 </td>
-                <td style={{ ...tdStyle(), color: "#f0c040" }}>{(r.vol/1e6).toFixed(2)}M</td>
-                <td style={{ ...tdStyle(), color: r.rsi > 70 ? "#ff4560" : r.rsi < 30 ? "#00d97e" : "#b040e0", fontWeight: 700 }}>
+                <td style={{ ...tdStyle(), color: "var(--yellow)" }}>{(r.vol/1e6).toFixed(2)}M</td>
+                <td style={{ ...tdStyle(), color: r.rsi > 70 ? "var(--red)" : r.rsi < 30 ? "var(--green)" : "var(--purple)", fontWeight: 700 }}>
                   {r.rsi.toFixed(1)}
                 </td>
-                <td style={{ ...tdStyle(), color: r.vpa >= 13 ? "#00d97e" : r.vpa <= 7 ? "#ff4560" : "#f0c040", fontWeight: 700 }}>
+                <td style={{ ...tdStyle(), color: r.vpa >= 13 ? "var(--green)" : r.vpa <= 7 ? "var(--red)" : "var(--yellow)", fontWeight: 700 }}>
                   {r.vpa}/20
                 </td>
                 <td>
                   <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 6,
                     background: r.aboveEMA ? "#00d97e15" : "#ff456015",
-                    color: r.aboveEMA ? "#00d97e" : "#ff4560" }}>
+                    color: r.aboveEMA ? "var(--green)" : "var(--red)" }}>
                     {r.aboveEMA ? "Above" : "Below"}
                   </span>
                 </td>
                 <td>
                   {r.goldenCross && (
-                    <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 6, background: "#f0c04020", color: "#f0c040" }}>
+                    <span style={{ fontSize: 10, padding: "1px 6px", borderRadius: 6, background: "#f0c04020", color: "var(--yellow)" }}>
                       ✦ Golden X
                     </span>
                   )}
@@ -513,7 +578,7 @@ function ScreenerView({ stockCache, setActiveTicker, setNav }) {
             ))}
             {results.length === 0 && (
               <tr>
-                <td colSpan={10} style={{ padding: 24, color: "#1e4050", textAlign: "center", fontSize: 12 }}>
+                <td colSpan={10} style={{ padding: 24, color: "var(--text-muted)", textAlign: "center", fontSize: 12 }}>
                   Không có kết quả — thử điều chỉnh bộ lọc
                 </td>
               </tr>
@@ -539,30 +604,30 @@ function NewsView() {
             padding: "4px 9px", fontSize: 10, borderRadius: 4, cursor: "pointer",
             fontFamily: "inherit", transition: "all 0.12s",
             background: filter === tag ? "#00d97e15" : "transparent",
-            color:      filter === tag ? "#00d97e"   : "#2a5060",
-            border: `1px solid ${filter === tag ? "#00d97e40" : "#0d1f2e"}`,
+            color:      filter === tag ? "var(--green)"   : "var(--text-sub)",
+            border: `1px solid ${filter === tag ? "#00d97e40" : "var(--border)"}`,
           }}>{tag}</button>
         ))}
       </div>
 
       {news.map((n) => (
         <div key={n.id} style={{
-          background: "#06101a",
+          background: "var(--bg-card)",
           border: "1px solid #0d1f2e",
-          borderLeft: `3px solid ${n.hot ? "#00d97e" : "#0d1f2e"}`,
+          borderLeft: `3px solid ${n.hot ? "var(--green)" : "var(--border)"}`,
           borderRadius: 7, padding: "11px 14px", marginBottom: 7,
           transition: "border-color 0.12s",
         }}
-          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "#1a3a50")}
-          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "#0d1f2e")}
+          onMouseEnter={(e) => (e.currentTarget.style.borderColor = "var(--border-hi)")}
+          onMouseLeave={(e) => (e.currentTarget.style.borderColor = "var(--border)")}
         >
           <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
-            <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 8, background: "#00d97e12", color: "#00d97e", fontWeight: 600 }}>{n.tag}</span>
-            <span style={{ fontSize: 10, color: "#2a5060" }}>{n.source}</span>
-            <span style={{ fontSize: 10, color: "#1e4050", marginLeft: "auto" }}>{n.time}</span>
-            {n.hot && <span style={{ fontSize: 10, color: "#ff9040" }}>🔥</span>}
+            <span style={{ fontSize: 10, padding: "1px 7px", borderRadius: 8, background: "#00d97e12", color: "var(--green)", fontWeight: 600 }}>{n.tag}</span>
+            <span style={{ fontSize: 10, color: "var(--text-sub)" }}>{n.source}</span>
+            <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>{n.time}</span>
+            {n.hot && <span style={{ fontSize: 10, color: "var(--orange)" }}>🔥</span>}
           </div>
-          <div style={{ fontSize: 13, color: "#c8d8e8", lineHeight: 1.6 }}>{n.title}</div>
+          <div style={{ fontSize: 13, color: "var(--text-primary)", lineHeight: 1.6 }}>{n.title}</div>
         </div>
       ))}
     </div>
@@ -625,7 +690,7 @@ export default function Home() {
 
         {/* ── TOP BAR ── */}
         <header style={{
-          background: "#050c16", borderBottom: "1px solid #0a1c2c",
+          background: "var(--bg-base)", borderBottom: "1px solid #0a1c2c",
           padding: "0 16px", height: 50,
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0, gap: 12,
@@ -634,19 +699,19 @@ export default function Home() {
           <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
             <div style={{
               width: 7, height: 7, borderRadius: "50%",
-              background: "#00d97e",
+              background: "var(--green)",
               animation: "pulse-dot 2s ease-in-out infinite",
             }} />
             <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>VN</span>
-            <span style={{ fontSize: 14, color: "#00d97e" }}>TRADE</span>
+            <span style={{ fontSize: 14, color: "var(--green)" }}>TRADE</span>
           </div>
 
           {/* VN-Index */}
           <div style={{ fontSize: 12, flexShrink: 0 }}>
-            <span style={{ color: "#2a5060" }}>VN-Index </span>
+            <span style={{ color: "var(--text-sub)" }}>VN-Index </span>
             <span style={{ color: "#fff", fontWeight: 700 }}>{vnLast?.close.toFixed(2) ?? "···"}</span>
             {vnLast && (
-              <span style={{ color: vnChg >= 0 ? "#00d97e" : "#ff4560", marginLeft: 6 }}>
+              <span style={{ color: vnChg >= 0 ? "var(--green)" : "var(--red)", marginLeft: 6 }}>
                 {vnChg >= 0 ? "▲" : "▼"}{Math.abs(vnChg).toFixed(2)}%
               </span>
             )}
@@ -676,7 +741,7 @@ export default function Home() {
         <footer style={{
           background: "#02050a", borderTop: "1px solid #07121c",
           padding: "3px 16px", display: "flex", justifyContent: "space-between",
-          fontSize: 10, color: "#0e2030", flexShrink: 0,
+          fontSize: 10, color: "var(--text-dim)", flexShrink: 0,
         }}>
           <span>
             API: apipubaws.tcbs.com.vn/stock-insight/v1 ·{" "}
