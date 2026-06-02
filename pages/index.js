@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 import CandlestickChart from "@/components/CandlestickChart";
-import { RSIChart, MACDChart, VPAScoreChart } from "@/components/SubChart";
+import { RSIChart, MACDChart, VPAScoreChart, MCDXChart } from "@/components/SubChart";
 import PortfolioScanner from "@/components/PortfolioScanner";
 import { fetchStock, fetchMarket } from "@/lib/tcbs";
-import { calcEMA, calcRSI, calcMACD, calcVSA, calcCompositeScore } from "@/lib/indicators";
+import { calcEMA, calcRSI, calcMACD, calcVSA, calcCompositeScore, calcMCDX, getMCDXSignal } from "@/lib/indicators";
 import { STOCKS, WATCHLIST_DEFAULT, SECTORS, generateMock, generateMockVNIndex } from "@/lib/stocks";
 
 // ── CONSTANTS ─────────────────────────────────────────────────────────────────
@@ -53,7 +53,7 @@ function Badge({ source }) {
       ···
     </span>
   );
-  if (source === "tcbs") return (
+  if (source === "tcbs" || source === "yahoo" || source === "vndirect") return (
     <span style={{ fontSize: 9, padding: "1px 7px", borderRadius: 8, background: "#00d97e15", color: "#00d97e" }}>
       LIVE
     </span>
@@ -133,12 +133,15 @@ function ChartView({ ticker, setTicker, sourceMap }) {
   const [showRSI,  setShowRSI]  = useState(true);
   const [showMACD, setShowMACD] = useState(false);
   const [showVPA,  setShowVPA]  = useState(false);
+  const [showMCDX, setShowMCDX] = useState(false);
 
   const ema20   = calcEMA(data, 20);
   const ema50   = calcEMA(data, 50);
   const rsi     = calcRSI(data);
   const macd    = calcMACD(data);
   const vpaScores = showVPA ? calcCompositeScore(data) : [];
+  const mcdxScores = showMCDX ? calcMCDX(data) : [];
+  const mcdxSignal = showMCDX ? getMCDXSignal(calcMCDX(data)) : null;
   const vsaSigs = showVPA ? calcVSA(data) : [];
 
   const last    = data[data.length - 1] || {};
@@ -183,6 +186,7 @@ function ChartView({ ticker, setTicker, sourceMap }) {
           <ToggleBtn label="RSI"      active={showRSI}  color="#b040e0" onClick={() => setShowRSI(p=>!p)} />
           <ToggleBtn label="MACD"     active={showMACD} color="#3b9eff" onClick={() => setShowMACD(p=>!p)} />
           <ToggleBtn label="VPA Score" active={showVPA} color="#00d97e" onClick={() => setShowVPA(p=>!p)} />
+          <ToggleBtn label="MCDX Banker" active={showMCDX} color="#ff9040" onClick={() => setShowMCDX(p=>!p)} />
         </div>
       </div>
 
@@ -246,6 +250,32 @@ function ChartView({ ticker, setTicker, sourceMap }) {
       {showVPA && (
         <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
           <VPAScoreChart scores={vpaScores} height={75} />
+        </div>
+      )}
+
+      {showMCDX && mcdxSignal && (
+        <div style={{
+          display: "flex", alignItems: "center", gap: 10, padding: "7px 12px",
+          background: "#05101a", border: "1px solid #0d1f2e", borderRadius: 7, marginBottom: 5,
+        }}>
+          <span style={{ fontSize: 10, color: "#2a5060" }}>MCDX Banker Signal:</span>
+          <span style={{
+            fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 8,
+            background: mcdxSignal.signal === "accumulation" ? "#00d97e20" : mcdxSignal.signal === "distribution" ? "#ff456020" : "#3b9eff20",
+            color:      mcdxSignal.signal === "accumulation" ? "#00d97e"   : mcdxSignal.signal === "distribution" ? "#ff4560"   : "#3b9eff",
+          }}>
+            {mcdxSignal.signal === "accumulation" ? "▲ TÍCH LŨY" : mcdxSignal.signal === "distribution" ? "▼ PHÂN PHỐI" : "→ TRUNG TÍNH"}
+          </span>
+          <span style={{ fontSize: 11, color: "#f0c040" }}>Score: {mcdxSignal.strength}</span>
+          <span style={{ fontSize: 10, color: "#1e4050", marginLeft: "auto" }}>
+            {mcdxSignal.signal === "accumulation" ? "Banker đang mua tích lũy" : mcdxSignal.signal === "distribution" ? "Banker đang bán phân phối" : "Chưa có tín hiệu rõ"}
+          </span>
+        </div>
+      )}
+
+      {showMCDX && (
+        <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
+          <MCDXChart mcdx={mcdxScores} height={88} />
         </div>
       )}
 
