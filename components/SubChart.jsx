@@ -1,245 +1,250 @@
 /**
  * SubChart.jsx
- * RSI, MACD, MCDX — clone style AmiBroker VSA+VPA V5.1
- * MCDX: histogram đỏ/vàng/xanh theo zone, đường CA MAP màu xanh
+ * MACD + MCDX (đỏ/xanh kiểu Banker) + VPA Score
+ * RSI đã bỏ theo yêu cầu
  */
 import { useRef, useEffect } from "react";
 
-// ── SHARED DRAW HELPERS ───────────────────────────────────────────────────────
-const FONT = "10px 'IBM Plex Mono',monospace";
-const FONT_BOLD = "bold 10px 'IBM Plex Mono',monospace";
+const FONT     = "10px monospace";
+const FONT_B   = "bold 10px monospace";
+const VISIBLE  = 120;
+const PAD_L    = 6;
+const PAD_R    = 58;
 
-function drawGrid(ctx, W, H, pL, pR, levels, getY, getLabel) {
-  ctx.setLineDash([1, 4]); ctx.lineWidth = 1;
-  levels.forEach(v => {
-    const y = getY(v);
-    ctx.strokeStyle = "#1a2a40";
-    ctx.beginPath(); ctx.moveTo(pL, y); ctx.lineTo(W - pR, y); ctx.stroke();
-    ctx.fillStyle = "#4a6a88"; ctx.font = FONT; ctx.textAlign = "left";
-    ctx.fillText(getLabel(v), W - pR + 3, y + 4);
-  });
-  ctx.setLineDash([]);
+function fmtPrice(v) {
+  if (!v) return "—";
+  if (v >= 100000) return (v/1000).toFixed(0)+"k";
+  if (v >= 10000)  return (v/1000).toFixed(1)+"k";
+  if (v >= 1000)   return (v/1000).toFixed(2)+"k";
+  return v.toFixed(1);
 }
 
-// ── RSI ──────────────────────────────────────────────────────────────────────
-export function RSIChart({ rsi = [], height = 80 }) {
-  const ref = useRef(null);
-  useEffect(() => {
-    const c = ref.current; if (!c) return;
-    const ctx = c.getContext("2d"); const W = c.width, H = height;
-    ctx.clearRect(0, 0, W, H);
-    const pL = 6, pR = 62, n = 120;
-    const step = (W - pL - pR) / n;
-    const full = rsi.slice(-n);
-    const py = v => H - (v / 100) * H;
-
-    // Zone fill
-    ctx.fillStyle = "#ff3d5710";
-    ctx.fillRect(pL, 0, W - pL - pR, py(70));
-    ctx.fillStyle = "#00e67610";
-    ctx.fillRect(pL, py(30), W - pL - pR, H - py(30));
-
-    drawGrid(ctx, W, H, pL, pR, [20, 30, 50, 70, 80], py, v => v);
-
-    // RSI line
-    ctx.beginPath(); ctx.strokeStyle = "#ffd740"; ctx.lineWidth = 1.5;
-    let s = false;
-    full.forEach((v, i) => {
-      if (!v) return;
-      const x = pL + i * step + step / 2;
-      s ? ctx.lineTo(x, py(v)) : (ctx.moveTo(x, py(v)), s = true);
-    });
-    ctx.stroke();
-
-    const last = full.filter(Boolean).slice(-1)[0];
-    ctx.fillStyle = "#1e2d45"; ctx.font = FONT; ctx.textAlign = "left";
-    ctx.fillText("RSI(14)", pL + 4, 12);
-    if (last != null) {
-      const col = last > 70 ? "#ff3d57" : last < 30 ? "#00e676" : "#ffd740";
-      ctx.fillStyle = col; ctx.font = FONT_BOLD; ctx.textAlign = "right";
-      ctx.fillText(last.toFixed(1), W - pR - 4, 12);
-    }
-  }, [rsi, height]);
-  return <canvas ref={ref} width={800} height={height} style={{ width: "100%", height, display: "block", background: "#0a0e1a" }} />;
+// Vẽ đường dọc crosshair trên sub-chart
+function drawCrosshair(ctx, W, H, cx, step, n) {
+  if (cx === null || cx === undefined) return;
+  const i = Math.round((cx - PAD_L) / step - 0.5);
+  if (i < 0 || i >= n) return;
+  const snapX = PAD_L + i * step + step / 2;
+  ctx.save();
+  ctx.strokeStyle = "rgba(255,255,255,0.3)";
+  ctx.lineWidth = 1; ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(snapX, 0); ctx.lineTo(snapX, H); ctx.stroke();
+  ctx.restore();
 }
 
 // ── MACD ─────────────────────────────────────────────────────────────────────
-export function MACDChart({ macd = {}, height = 80 }) {
+export function MACDChart({ macd = {}, height = 80, crosshairX = null }) {
   const ref = useRef(null);
   const { macdLine = [], signalLine = [], histogram = [] } = macd;
+
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); const W = c.width, H = height;
     ctx.clearRect(0, 0, W, H);
-    const pL = 6, pR = 62, n = 120, step = (W - pL - pR) / n;
-    const hist = histogram.slice(-n), ml = macdLine.slice(-n), sig = signalLine.slice(-n);
-    const all = [...hist, ...ml, ...sig].filter(Boolean);
+    const step = (W - PAD_L - PAD_R) / VISIBLE;
+    const hist = histogram.slice(-VISIBLE), ml = macdLine.slice(-VISIBLE), sig = signalLine.slice(-VISIBLE);
+    const all = [...hist,...ml,...sig].filter(Boolean);
     if (!all.length) return;
     const minV = Math.min(...all), maxV = Math.max(...all), range = maxV - minV || 1;
     const py = v => H - ((v - minV) / range) * H;
     const zY = py(0);
 
-    ctx.strokeStyle = "#1e2d45"; ctx.lineWidth = 1;
-    ctx.beginPath(); ctx.moveTo(pL, zY); ctx.lineTo(W - pR, zY); ctx.stroke();
+    // Zero line
+    ctx.strokeStyle = "#1e2d45"; ctx.lineWidth = 1; ctx.setLineDash([1,3]);
+    ctx.beginPath(); ctx.moveTo(PAD_L, zY); ctx.lineTo(W - PAD_R, zY); ctx.stroke();
+    ctx.setLineDash([]);
 
-    // Histogram — xanh/đỏ theo giá trị
+    // Histogram
     hist.forEach((v, i) => {
       if (!v) return;
-      const x = pL + i * step + step * 0.1, bW = step * 0.8;
-      ctx.fillStyle = v >= 0 ? "#00e67670" : "#ff3d5770";
+      const x = PAD_L + i * step + step * 0.1, bW = step * 0.8;
+      ctx.fillStyle = v >= 0 ? "#00e67665" : "#ff3d5765";
       const top = Math.min(py(v), zY), bH = Math.abs(py(v) - zY);
       ctx.fillRect(x, top, bW, Math.max(1, bH));
     });
 
-    // MACD & Signal lines
-    [[ml, "#00aaff", 1.5], [sig, "#ff9100", 1.5]].forEach(([arr, col, lw]) => {
+    [[ml,"#00aaff",1.5],[sig,"#ff9100",1.5]].forEach(([arr,col,lw]) => {
       ctx.beginPath(); ctx.strokeStyle = col; ctx.lineWidth = lw;
       let s = false;
-      arr.forEach((v, i) => {
+      arr.forEach((v,i) => {
         if (!v) return;
-        const x = pL + i * step + step / 2;
-        s ? ctx.lineTo(x, py(v)) : (ctx.moveTo(x, py(v)), s = true);
+        const x = PAD_L + i * step + step/2;
+        s ? ctx.lineTo(x,py(v)) : (ctx.moveTo(x,py(v)), s=true);
       });
       ctx.stroke();
     });
 
+    // Labels
     ctx.fillStyle = "#1e2d45"; ctx.font = FONT; ctx.textAlign = "left";
-    ctx.fillText("MACD(12,26,9)", pL + 4, 12);
-    ctx.fillStyle = "#00aaff"; ctx.fillText(" MACD", pL + 90, 12);
-    ctx.fillStyle = "#ff9100"; ctx.fillText(" Signal", pL + 148, 12);
-  }, [macd, height]);
-  return <canvas ref={ref} width={800} height={height} style={{ width: "100%", height, display: "block", background: "#0a0e1a" }} />;
+    ctx.fillText("MACD(12,26,9)", PAD_L+4, 12);
+    const lastH = hist.filter(Boolean).slice(-1)[0];
+    if (lastH != null) {
+      ctx.fillStyle = lastH >= 0 ? "#00e676" : "#ff3d57";
+      ctx.font = FONT_B; ctx.textAlign = "right";
+      ctx.fillText(lastH.toFixed(3), W - PAD_R - 4, 12);
+    }
+
+    drawCrosshair(ctx, W, H, crosshairX, step, VISIBLE);
+  }, [macd, height, crosshairX]);
+
+  return <canvas ref={ref} width={800} height={height} style={{ width:"100%", height, display:"block", background:"#0a0e1a" }} />;
 }
 
-// ── MCDX — Clone AmiBroker style ─────────────────────────────────────────────
-// Histogram: đỏ (distribution, < 30), vàng (neutral 30-70), xanh (accumulation > 70)
-// Đường CA MAP: smooth line màu xanh dương
-export function MCDXChart({ mcdx = [], height = 100 }) {
+// ── MCDX — Màu đỏ kiểu Banker độ tham gia ────────────────────────────────────
+// Histogram MÀU ĐỎ gradient theo cường độ (đậm = nhiều cá mập)
+// Đường trung bình xanh dương = MA cá mập
+export function MCDXChart({ mcdx = [], height = 100, crosshairX = null }) {
   const ref = useRef(null);
+
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); const W = c.width, H = height;
     ctx.clearRect(0, 0, W, H);
-    const pL = 6, pR = 62, n = 120, step = (W - pL - pR) / n;
-    const vis = mcdx.slice(-n);
+    const step = (W - PAD_L - PAD_R) / VISIBLE;
+    const vis  = mcdx.slice(-VISIBLE);
     const valid = vis.filter(v => v != null);
+
     if (!valid.length) {
       ctx.fillStyle = "#3a5878"; ctx.font = FONT; ctx.textAlign = "center";
-      ctx.fillText("MCDX — cần ít nhất 30 phiên dữ liệu", W/2, H/2);
+      ctx.fillText("MCDX — cần thêm dữ liệu", W/2, H/2);
       return;
     }
 
-    const py = v => H - 4 - ((v / 100) * (H - 8));
+    const py = v => H - 4 - ((v/100) * (H-8));
 
-    // Zone backgrounds
-    ctx.fillStyle = "#ff3d5710";
-    ctx.fillRect(pL, py(30), W - pL - pR, H - py(30));  // bear zone
-    ctx.fillStyle = "#00e67610";
-    ctx.fillRect(pL, 0, W - pL - pR, py(70));             // bull zone
+    // Nền zone
+    ctx.fillStyle = "#ff000008"; ctx.fillRect(PAD_L, 0, W-PAD_L-PAD_R, H);
 
-    // Grid lines
-    drawGrid(ctx, W, H, pL, pR, [0, 10, 20, 30, 50, 70, 80, 100], py, v => v);
+    // Đường zero (50%)
+    ctx.setLineDash([2,4]); ctx.strokeStyle = "#2a3a50"; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(PAD_L, py(50)); ctx.lineTo(W-PAD_R, py(50)); ctx.stroke();
+    ctx.setLineDash([]);
 
-    // Labels zone
-    ctx.fillStyle = "#ff3d5740"; ctx.font = "9px monospace"; ctx.textAlign = "left";
-    ctx.fillText("PHÂN PHỐI", pL + 4, py(15));
-    ctx.fillStyle = "#00e67640";
-    ctx.fillText("TÍCH LŨY", pL + 4, py(85));
+    // Grid nhẹ
+    [20, 40, 60, 80].forEach(v => {
+      ctx.strokeStyle = "#1a2535"; ctx.lineWidth = 1;
+      ctx.setLineDash([1,4]);
+      ctx.beginPath(); ctx.moveTo(PAD_L, py(v)); ctx.lineTo(W-PAD_R, py(v)); ctx.stroke();
+      ctx.fillStyle = "#3a5060"; ctx.font = "9px monospace"; ctx.textAlign = "left";
+      ctx.fillText(v, W-PAD_R+3, py(v)+3);
+    });
+    ctx.setLineDash([]);
 
-    // Histogram bars — 3 màu theo zone
+    // Histogram đỏ — độ đậm theo cường độ (càng cao càng đỏ đậm)
     vis.forEach((v, i) => {
       if (v == null) return;
-      const x  = pL + i * step + step * 0.08;
-      const bW = step * 0.84;
+      const x  = PAD_L + i * step + step * 0.05;
+      const bW = step * 0.9;
       const y  = py(v);
       const bH = H - 4 - y;
 
-      // Màu theo zone — clone AmiBroker
-      let col;
-      if (v >= 70)      col = "#00e676";   // xanh lá — accumulation
-      else if (v >= 50) col = "#80ff40";   // xanh vàng — weak bull
-      else if (v >= 30) col = "#ffd740";   // vàng — neutral
-      else if (v >= 15) col = "#ff9100";   // cam — weak bear
-      else              col = "#ff3d57";   // đỏ — distribution
-
-      ctx.fillStyle = col + "cc";
+      // Màu đỏ gradient: nhạt khi thấp, đậm khi cao
+      // v 0→50: từ xanh tối đến đỏ nhạt
+      // v 50→100: từ đỏ nhạt đến đỏ đậm (cá mập mạnh)
+      let r, g, b, a;
+      if (v >= 70) {
+        // Cá mập mạnh: đỏ đậm
+        r = 255; g = 30 + (100-v)*1.5; b = 40; a = 0.85;
+      } else if (v >= 50) {
+        // Trung bình cao: đỏ vừa
+        r = 220; g = 60 + (70-v)*2; b = 60; a = 0.65;
+      } else if (v >= 30) {
+        // Trung tính: cam nhạt
+        r = 180; g = 100; b = 60; a = 0.45;
+      } else {
+        // Yếu: xanh tối
+        r = 60; g = 120; b = 180; a = 0.4;
+      }
+      ctx.fillStyle = `rgba(${r},${g},${b},${a})`;
       ctx.fillRect(x, y, bW, Math.max(1, bH));
-      // Top highlight
-      ctx.fillStyle = col;
+
+      // Viền top sáng hơn
+      ctx.fillStyle = `rgba(${r},${g},${b},${Math.min(1, a+0.3)})`;
       ctx.fillRect(x, y, bW, 2);
     });
 
-    // CA MAP line — smooth EMA9 của MCDX (đường xanh dương trong ảnh anh)
-    const caMap = [];
-    const k = 2 / 10;
-    let ema = null;
-    vis.forEach(v => {
-      if (v == null) { caMap.push(null); return; }
-      ema = ema === null ? v : v * k + ema * (1 - k);
-      caMap.push(+ema.toFixed(2));
+    // Đường MA Cá Mập — EMA9 của MCDX (đường trung bình xanh)
+    const k = 2/10; let ema = null;
+    const maLine = vis.map(v => {
+      if (v == null) return null;
+      ema = ema === null ? v : v*k + ema*(1-k);
+      return +ema.toFixed(2);
     });
 
-    ctx.beginPath(); ctx.strokeStyle = "#00aaff"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.strokeStyle = "#00d4ff"; ctx.lineWidth = 2;
     let s = false;
-    caMap.forEach((v, i) => {
+    maLine.forEach((v, i) => {
       if (!v) return;
-      const x = pL + i * step + step / 2;
-      s ? ctx.lineTo(x, py(v)) : (ctx.moveTo(x, py(v)), s = true);
+      const x = PAD_L + i*step + step/2;
+      s ? ctx.lineTo(x, py(v)) : (ctx.moveTo(x, py(v)), s=true);
     });
     ctx.stroke();
 
     // Labels
-    const lastMCDX = valid.slice(-1)[0];
-    const lastCA   = caMap.filter(Boolean).slice(-1)[0];
+    const lastV  = valid.slice(-1)[0];
+    const lastMA = maLine.filter(Boolean).slice(-1)[0];
     ctx.fillStyle = "#1e2d45"; ctx.font = FONT; ctx.textAlign = "left";
-    ctx.fillText("MCDX Banker", pL + 4, 12);
+    ctx.fillText("MCDX Banker", PAD_L+4, 12);
 
-    if (lastMCDX != null) {
-      const col = lastMCDX >= 70 ? "#00e676" : lastMCDX <= 30 ? "#ff3d57" : "#ffd740";
-      const lbl = lastMCDX >= 70 ? "TÍCH LŨY" : lastMCDX <= 30 ? "PHÂN PHỐI" : "TRUNG TÍNH";
-      ctx.fillStyle = col; ctx.font = FONT_BOLD; ctx.textAlign = "right";
-      ctx.fillText(`${lastMCDX} · ${lbl}`, W - pR - 4, 12);
+    if (lastV != null) {
+      const intensity = lastV >= 70 ? "MẠNH" : lastV >= 50 ? "VỪA" : lastV >= 30 ? "YẾU" : "THẤP";
+      const col = lastV >= 70 ? "#ff4444" : lastV >= 50 ? "#ff7744" : lastV >= 30 ? "#ffaa44" : "#4488cc";
+      ctx.fillStyle = col; ctx.font = FONT_B; ctx.textAlign = "right";
+      ctx.fillText(`${lastV} · ${intensity}`, W-PAD_R-4, 12);
     }
-    if (lastCA != null) {
-      ctx.fillStyle = "#00aaff"; ctx.font = FONT; ctx.textAlign = "right";
-      ctx.fillText(`CA Map = ${lastCA.toFixed(1)}`, W - pR - 4, 24);
+    if (lastMA != null) {
+      ctx.fillStyle = "#00d4ff88"; ctx.font = FONT; ctx.textAlign = "right";
+      ctx.fillText(`MA Cá Mập ${lastMA.toFixed(1)}`, W-PAD_R-4, 24);
     }
-  }, [mcdx, height]);
-  return <canvas ref={ref} width={800} height={height} style={{ width: "100%", height, display: "block", background: "#0a0e1a" }} />;
+
+    drawCrosshair(ctx, W, H, crosshairX, step, VISIBLE);
+  }, [mcdx, height, crosshairX]);
+
+  return <canvas ref={ref} width={800} height={height} style={{ width:"100%", height, display:"block", background:"#0a0e1a" }} />;
 }
 
 // ── VPA SCORE ─────────────────────────────────────────────────────────────────
-export function VPAScoreChart({ scores = [], height = 80 }) {
+export function VPAScoreChart({ scores = [], height = 75, crosshairX = null }) {
   const ref = useRef(null);
   useEffect(() => {
     const c = ref.current; if (!c) return;
     const ctx = c.getContext("2d"); const W = c.width, H = height;
     ctx.clearRect(0, 0, W, H);
-    const pL = 6, pR = 62, n = 120, step = (W - pL - pR) / n;
-    const vis = scores.slice(-n);
-    const py = v => H - (v / 20) * H;
+    const step = (W-PAD_L-PAD_R)/VISIBLE;
+    const vis = scores.slice(-VISIBLE);
+    const py = v => H - (v/20)*H;
 
-    ctx.fillStyle = "#ff3d5710"; ctx.fillRect(pL, py(7), W - pL - pR, H - py(7));
-    ctx.fillStyle = "#00e67610"; ctx.fillRect(pL, 0, W - pL - pR, py(13));
-    drawGrid(ctx, W, H, pL, pR, [5, 10, 13, 15], py, v => v);
+    ctx.fillStyle = "#ff3d5710"; ctx.fillRect(PAD_L, py(7), W-PAD_L-PAD_R, H-py(7));
+    ctx.fillStyle = "#00e67610"; ctx.fillRect(PAD_L, 0, W-PAD_L-PAD_R, py(13));
 
-    vis.forEach((v, i) => {
-      if (v == null) return;
-      const x  = pL + i * step + step * 0.1, bW = step * 0.8;
-      const col = v >= 13 ? "#00e676" : v <= 7 ? "#ff3d57" : "#ffd740";
-      ctx.fillStyle = col + "aa";
-      ctx.fillRect(x, py(v), bW, H - py(v));
-      ctx.fillStyle = col; ctx.fillRect(x, py(v), bW, 2);
+    ctx.setLineDash([1,4]);
+    [5,10,13,15].forEach(v => {
+      ctx.strokeStyle = "#1a2a40"; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(PAD_L,py(v)); ctx.lineTo(W-PAD_R,py(v)); ctx.stroke();
+      ctx.fillStyle="#3a5060"; ctx.font="9px monospace"; ctx.textAlign="left";
+      ctx.fillText(v, W-PAD_R+3, py(v)+3);
+    });
+    ctx.setLineDash([]);
+
+    vis.forEach((v,i) => {
+      if (v==null) return;
+      const x=PAD_L+i*step+step*0.1, bW=step*0.8;
+      const col = v>=13?"#00e676":v<=7?"#ff3d57":"#ffd740";
+      ctx.fillStyle=col+"aa"; ctx.fillRect(x,py(v),bW,H-py(v));
+      ctx.fillStyle=col; ctx.fillRect(x,py(v),bW,2);
     });
 
-    const last = vis.filter(v => v != null).slice(-1)[0];
-    ctx.fillStyle = "#1e2d45"; ctx.font = FONT; ctx.textAlign = "left";
-    ctx.fillText("VPA Score (0–20)", pL + 4, 12);
-    if (last != null) {
-      const col = last >= 13 ? "#00e676" : last <= 7 ? "#ff3d57" : "#ffd740";
-      ctx.fillStyle = col; ctx.font = FONT_BOLD; ctx.textAlign = "right";
-      ctx.fillText(`${last}/20`, W - pR - 4, 12);
+    const last = vis.filter(v=>v!=null).slice(-1)[0];
+    ctx.fillStyle="#1e2d45"; ctx.font=FONT; ctx.textAlign="left";
+    ctx.fillText("VPA Score (0–20)", PAD_L+4, 12);
+    if (last!=null) {
+      const col=last>=13?"#00e676":last<=7?"#ff3d57":"#ffd740";
+      ctx.fillStyle=col; ctx.font=FONT_B; ctx.textAlign="right";
+      ctx.fillText(`${last}/20`, W-PAD_R-4, 12);
     }
-  }, [scores, height]);
-  return <canvas ref={ref} width={800} height={height} style={{ width: "100%", height, display: "block", background: "#0a0e1a" }} />;
+
+    drawCrosshair(ctx, W, H, crosshairX, step, VISIBLE);
+  }, [scores, height, crosshairX]);
+
+  return <canvas ref={ref} width={800} height={height} style={{ width:"100%", height, display:"block", background:"#0a0e1a" }} />;
 }

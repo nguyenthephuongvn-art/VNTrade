@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Head from "next/head";
 import CandlestickChart from "@/components/CandlestickChart";
-import { RSIChart, MACDChart, VPAScoreChart, MCDXChart } from "@/components/SubChart";
+import { MACDChart, VPAScoreChart, MCDXChart } from "@/components/SubChart";
 import PortfolioScanner from "@/components/PortfolioScanner";
 import { fetchStock, fetchMarket } from "@/lib/tcbs";
 import { calcEMA, calcRSI, calcMACD, calcVSA, calcCompositeScore, calcMCDX, getMCDXSignal } from "@/lib/indicators";
@@ -281,15 +281,15 @@ function QuickSearch({ setTicker }) {
 }
 
 // ── CHART VIEW ────────────────────────────────────────────────────────────────
-function ChartView({ ticker, setTicker, sourceMap }) {
+function ChartView({ ticker, setTicker, sourceMap, stockCache }) {
   const { data, source, error } = useStockData(ticker);
   const [showEMA,  setShowEMA]  = useState(true);
   const [showVol,  setShowVol]  = useState(true);
-  const [showRSI,  setShowRSI]  = useState(true);
   const [showMACD, setShowMACD] = useState(false);
   const [showVPA,  setShowVPA]  = useState(false);
-  const [showMCDX, setShowMCDX] = useState(false);
-  const [hoverCandle, setHoverCandle] = useState(null); // cây nến đang hover
+  const [showMCDX, setShowMCDX] = useState(true);
+  const [hoverCandle, setHoverCandle] = useState(null);
+  const [crosshairX, setCrosshairX]   = useState(null);
 
   const ema20   = calcEMA(data, 20);
   const ema50   = calcEMA(data, 50);
@@ -312,7 +312,9 @@ function ChartView({ ticker, setTicker, sourceMap }) {
   const cardBg = "06101a";
 
   return (
-    <div className="fade-in">
+    <div className="fade-in" style={{ display:"flex", gap:0, height:"100%" }}>
+      {/* ── MAIN CHART AREA ── */}
+      <div style={{ flex:1, minWidth:0, overflow:"auto" }}>
       {/* ══ COMPACT TOP BAR ══ */}
       <div style={{
         display: "flex", alignItems: "center", justifyContent: "space-between",
@@ -349,7 +351,6 @@ function ChartView({ ticker, setTicker, sourceMap }) {
         <div style={{ display: "flex", gap: 3, flexWrap: "wrap" }}>
           <ToggleBtn label="EMA"    active={showEMA}  color="var(--yellow)" onClick={() => setShowEMA(p=>!p)} />
           <ToggleBtn label="Vol"    active={showVol}  color="var(--blue)"   onClick={() => setShowVol(p=>!p)} />
-          <ToggleBtn label="RSI"    active={showRSI}  color="var(--purple)" onClick={() => setShowRSI(p=>!p)} />
           <ToggleBtn label="MACD"   active={showMACD} color="var(--blue)"   onClick={() => setShowMACD(p=>!p)} />
           <ToggleBtn label="VPA"    active={showVPA}  color="var(--green)"  onClick={() => setShowVPA(p=>!p)} />
           <ToggleBtn label="MCDX"   active={showMCDX} color="var(--orange)" onClick={() => setShowMCDX(p=>!p)} />
@@ -404,24 +405,18 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
       {/* Charts */}
       <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "10px 6px 2px", marginBottom: 5 }}>
-        <CandlestickChart data={data} ema20={ema20} ema50={ema50} ema200={ema200} showEMA={showEMA} showVolume={showVol} height={showVol ? 360 : 300} ticker={ticker} onHover={setHoverCandle} />
+        <CandlestickChart data={data} ema20={ema20} ema50={ema50} showEMA={showEMA} showVolume={showVol} height={showVol ? 340 : 280} ticker={ticker} onHover={setHoverCandle} onCrosshairX={setCrosshairX} crosshairX={crosshairX} />
       </div>
-
-      {showRSI && (
-        <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
-          <RSIChart rsi={rsi} height={75} />
-        </div>
-      )}
 
       {showMACD && (
         <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
-          <MACDChart macd={macd} height={75} />
+          <MACDChart macd={macd} height={75} crosshairX={crosshairX} />
         </div>
       )}
 
       {showVPA && (
         <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
-          <VPAScoreChart scores={vpaScores} height={75} />
+          <VPAScoreChart scores={vpaScores} height={75} crosshairX={crosshairX} />
         </div>
       )}
 
@@ -447,26 +442,134 @@ function ChartView({ ticker, setTicker, sourceMap }) {
 
       {showMCDX && (
         <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
-          <MCDXChart mcdx={mcdxScores} height={88} />
+          <MCDXChart mcdx={mcdxScores} height={96} crosshairX={crosshairX} />
         </div>
       )}
 
-      {/* Ticker picker */}
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", marginTop: 12 }}>
-        {Object.keys(STOCKS).map((t) => (
-          <button key={t} onClick={() => setTicker(t)} style={{
-            padding: "4px 8px", fontSize: 10, borderRadius: 4, cursor: "pointer",
-            fontFamily: "inherit", fontWeight: ticker === t ? 700 : 400,
-            background: ticker === t ? "var(--green)" : "var(--bg-card)",
-            color: ticker === t ? "var(--bg-deep)" : "var(--text-muted)",
-            border: `1px solid ${ticker === t ? "var(--green)" : "var(--border)"}`,
-          }}>
-            {t}
-            {sourceMap[t] === "tcbs" && ticker !== t && (
-              <span style={{ marginLeft: 2, fontSize: 7, color: "var(--green)" }}>●</span>
-            )}
-          </button>
+      </div>{/* end main chart */}
+
+      {/* ── SIDEBAR: danh sách CP 2 cột dọc bên phải ── */}
+      <StockSidebar ticker={ticker} setTicker={setTicker} stockCache={stockCache} />
+    </div>
+  );
+}
+
+
+// ── STOCK SIDEBAR — danh sách CP 2 cột dọc bên phải ─────────────────────────
+function StockSidebar({ ticker, setTicker, stockCache }) {
+  const [filter, setFilter] = useState("ALL");
+  const tickers = Object.keys(STOCKS);
+  const sectors = ["ALL", ...new Set(tickers.map(t => STOCKS[t].sector))];
+
+  const filtered = filter === "ALL"
+    ? tickers
+    : tickers.filter(t => STOCKS[t].sector === filter);
+
+  // Split thành 2 cột
+  const col1 = filtered.filter((_, i) => i % 2 === 0);
+  const col2 = filtered.filter((_, i) => i % 2 === 1);
+
+  const renderCell = (t) => {
+    const d   = stockCache[t];
+    const info = STOCKS[t];
+    let chg = null, close = null;
+    if (d && d.length >= 2) {
+      close = d[d.length-1].close;
+      chg   = ((close - d[d.length-2].close) / d[d.length-2].close) * 100;
+    }
+    const active = ticker === t;
+    // Format giá 4 ký tự
+    const fmtC = (v) => {
+      if (!v) return "···";
+      if (v >= 100000) return (v/1000).toFixed(0)+"k";
+      if (v >= 10000)  return (v/1000).toFixed(1)+"k";
+      if (v >= 1000)   return (v/1000).toFixed(1)+"k";
+      return v.toFixed(1);
+    };
+
+    return (
+      <div key={t}
+        onClick={() => setTicker(t)}
+        style={{
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          padding: "3px 6px", cursor: "pointer", borderRadius: 2,
+          background: active ? "#1a3a5a" : "transparent",
+          borderLeft: active ? "2px solid var(--blue)" : "2px solid transparent",
+          transition: "background 0.1s",
+        }}
+        onMouseEnter={e => { if (!active) e.currentTarget.style.background = "#111828"; }}
+        onMouseLeave={e => { if (!active) e.currentTarget.style.background = "transparent"; }}
+      >
+        <span style={{
+          fontSize: 10, fontWeight: active ? 700 : 500,
+          color: active ? "var(--blue)" : "var(--text-sub)",
+          minWidth: 28, fontFamily: "monospace",
+        }}>{t}</span>
+        {close != null ? (
+          <div style={{ textAlign: "right" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)", fontFamily: "monospace" }}>
+              {fmtC(close)}
+            </div>
+            <div style={{ fontSize: 9, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
+              {chg >= 0 ? "+" : ""}{chg.toFixed(1)}%
+            </div>
+          </div>
+        ) : (
+          <span style={{ fontSize: 9, color: "var(--text-dim)" }}>···</span>
+        )}
+      </div>
+    );
+  };
+
+  return (
+    <div style={{
+      width: 148, flexShrink: 0,
+      borderLeft: "1px solid var(--border)",
+      background: "var(--bg-base)",
+      display: "flex", flexDirection: "column",
+      overflow: "hidden",
+    }}>
+      {/* Sector filter */}
+      <div style={{ padding: "4px 4px 2px", borderBottom: "1px solid var(--border)" }}>
+        <select
+          value={filter}
+          onChange={e => setFilter(e.target.value)}
+          style={{
+            width: "100%", padding: "3px 4px", fontSize: 9,
+            background: "var(--bg-card)", border: "1px solid var(--border)",
+            color: "var(--text-sub)", borderRadius: 2, fontFamily: "monospace",
+          }}
+        >
+          {sectors.map(s => <option key={s} value={s}>{s === "ALL" ? "Tất cả ngành" : s}</option>)}
+        </select>
+      </div>
+
+      {/* Header */}
+      <div style={{
+        display: "grid", gridTemplateColumns: "1fr 1fr",
+        fontSize: 9, color: "var(--text-dim)", padding: "3px 6px",
+        borderBottom: "1px solid var(--border)", letterSpacing: 0.5,
+      }}>
+        <span>MÃ · GIÁ</span>
+        <span>MÃ · GIÁ</span>
+      </div>
+
+      {/* 2 columns */}
+      <div style={{ flex: 1, overflow: "auto" }}>
+        {col1.map((t, i) => (
+          <div key={t} style={{ display: "grid", gridTemplateColumns: "1fr 1fr", borderBottom: "1px solid #0d1520" }}>
+            {renderCell(t)}
+            {col2[i] ? renderCell(col2[i]) : <div />}
+          </div>
         ))}
+      </div>
+
+      {/* Footer count */}
+      <div style={{
+        padding: "3px 6px", borderTop: "1px solid var(--border)",
+        fontSize: 9, color: "var(--text-dim)", textAlign: "center",
+      }}>
+        {filtered.length} mã · {Object.values(stockCache).filter(d => d?.length > 0).length} loaded
       </div>
     </div>
   );
@@ -987,7 +1090,7 @@ export default function Home() {
 
         {/* ── CONTENT ── */}
         <main style={{ flex: 1, overflow: "auto", padding: "12px 16px" }}>
-          {nav === "chart"     && <ChartView ticker={ticker} setTicker={setTicker} sourceMap={sourceMap} />}
+          {nav === "chart"     && <ChartView ticker={ticker} setTicker={setTicker} sourceMap={sourceMap} stockCache={stockCache} />}
           {nav === "watchlist" && <WatchlistView watchlist={watchlist} setWatchlist={setWatchlist} stockCache={stockCache} setActiveTicker={setTicker} setNav={setNav} />}
           {nav === "screener"  && <ScreenerView stockCache={stockCache} setActiveTicker={setTicker} setNav={setNav} />}
           {nav === "scanner"   && <PortfolioScanner stockCache={stockCache} onSelectTicker={setTicker} setNav={setNav} />}
