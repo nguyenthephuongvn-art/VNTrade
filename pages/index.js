@@ -297,8 +297,6 @@ function ChartView({ ticker, setTicker, sourceMap, stockCache }) {
   const rsi     = calcRSI(data);
   const macd    = calcMACD(data);
   const vpaScores = showVPA ? calcCompositeScore(data) : [];
-  const mcdxScores = showMCDX ? calcMCDX(data) : [];
-  const mcdxSignal = showMCDX ? getMCDXSignal(calcMCDX(data)) : null;
   const vsaSigs = showVPA ? calcVSA(data) : [];
 
   const last    = data[data.length - 1] || {};
@@ -325,17 +323,11 @@ function ChartView({ ticker, setTicker, sourceMap, stockCache }) {
         <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
           <span style={{ fontSize: 16, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>{ticker}</span>
           <Badge source={source} />
-          <span style={{ fontSize: 20, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)" }}>
+          <span style={{ fontSize: 26, fontWeight: 700, color: chg >= 0 ? "var(--green)" : "var(--red)", fontFamily: "monospace" }}>
             {last.close?.toFixed(2) ?? "—"}
           </span>
-          <span style={{ fontSize: 11, color: chg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+          <span style={{ fontSize: 15, color: chg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
             {chg >= 0 ? "▲" : "▼"}{Math.abs(chg).toFixed(2)}%
-          </span>
-          <span style={{ fontSize: 10, color: "var(--text-muted)" }}>
-            {STOCKS[ticker]?.name?.slice(0,20) ?? ticker}
-          </span>
-          <span style={{ fontSize: 10, color: "var(--text-dim)" }}>
-            {STOCKS[ticker]?.exchange} · {STOCKS[ticker]?.sector}
           </span>
         </div>
         {/* RIGHT: Quick search */}
@@ -420,29 +412,11 @@ function ChartView({ ticker, setTicker, sourceMap, stockCache }) {
         </div>
       )}
 
-      {showMCDX && mcdxSignal && (
-        <div style={{
-          display: "flex", alignItems: "center", gap: 10, padding: "7px 12px",
-          background: "var(--bg-card)", border: "1px solid #0d1f2e", borderRadius: 7, marginBottom: 5,
-        }}>
-          <span style={{ fontSize: 10, color: "var(--text-sub)" }}>MCDX Banker Signal:</span>
-          <span style={{
-            fontSize: 11, fontWeight: 700, padding: "2px 10px", borderRadius: 8,
-            background: mcdxSignal.signal === "accumulation" ? "#00d97e20" : mcdxSignal.signal === "distribution" ? "#ff456020" : "#3b9eff20",
-            color:      mcdxSignal.signal === "accumulation" ? "var(--green)"   : mcdxSignal.signal === "distribution" ? "var(--red)"   : "var(--blue)",
-          }}>
-            {mcdxSignal.signal === "accumulation" ? "▲ TÍCH LŨY" : mcdxSignal.signal === "distribution" ? "▼ PHÂN PHỐI" : "→ TRUNG TÍNH"}
-          </span>
-          <span style={{ fontSize: 11, color: "var(--yellow)" }}>Score: {mcdxSignal.strength}</span>
-          <span style={{ fontSize: 10, color: "var(--text-muted)", marginLeft: "auto" }}>
-            {mcdxSignal.signal === "accumulation" ? "Banker đang mua tích lũy" : mcdxSignal.signal === "distribution" ? "Banker đang bán phân phối" : "Chưa có tín hiệu rõ"}
-          </span>
-        </div>
-      )}
+      
 
       {showMCDX && (
         <div style={{ background: "#050f18", border: "1px solid #0d1f2e", borderRadius: 7, padding: "6px 6px 2px", marginBottom: 5 }}>
-          <MCDXChart mcdx={mcdxScores} height={96} crosshairX={crosshairX} />
+          <MCDXChart data={data} height={110} crosshairX={crosshairX} />
         </div>
       )}
 
@@ -1001,10 +975,19 @@ export default function Home() {
   // VN-Index
   const [vnData,   setVnData]   = useState(null);
   const [vnSource, setVnSource] = useState("loading");
-  useEffect(() => {
-    fetchStock("VNINDEX", 60)
-      .then(({ data: d, source: s }) => { setVnData(d); setVnSource(s); })
+  const loadVNIndex = () => {
+    fetchStock("VNINDEX", 30)
+      .then(({ data: d, source: s }) => {
+        if (d && d.length > 0) { setVnData(d); setVnSource(s === "yahoo" ? "live" : s); }
+        else throw new Error("empty");
+      })
       .catch(() => { setVnData(generateMockVNIndex()); setVnSource("mock"); });
+  };
+
+  useEffect(() => {
+    loadVNIndex();
+    const timer = setInterval(loadVNIndex, 5 * 60 * 1000); // refresh 5 phút
+    return () => clearInterval(timer);
   }, []);
 
   const vnLast = vnData?.[vnData.length - 1];
@@ -1057,14 +1040,14 @@ export default function Home() {
             {/* Separator */}
             <span style={{ color: "var(--border-hi)", flexShrink: 0 }}>│</span>
 
-            {/* VNINDEX */}
-            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
-              <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>VNI</span>
-              <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>
+            {/* VNINDEX — live */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <span style={{ fontSize: 11, color: "var(--text-muted)", fontWeight: 600, letterSpacing: 0.5 }}>VNINDEX</span>
+              <span style={{ fontSize: 16, color: "#fff", fontWeight: 700, fontFamily: "monospace" }}>
                 {vnLast?.close.toFixed(2) ?? "···"}
               </span>
               {vnLast && (
-                <span style={{ fontSize: 11, color: vnChg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                <span style={{ fontSize: 13, color: vnChg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
                   {vnChg >= 0 ? "▲" : "▼"}{Math.abs(vnChg).toFixed(2)}%
                 </span>
               )}
