@@ -741,6 +741,133 @@ function NewsView() {
   );
 }
 
+
+// ── TOPBAR SEARCH — ô nhập mã nhỏ gọn trên topbar ────────────────────────────
+function TopbarSearch({ ticker, setTicker, setNav }) {
+  const [val, setVal] = useState("");
+  const [sugg, setSugg] = useState([]);
+  const allTickers = Object.keys(STOCKS);
+
+  const onChange = (e) => {
+    const v = e.target.value.toUpperCase();
+    setVal(v);
+    setSugg(v.length >= 1
+      ? allTickers.filter(t => t.startsWith(v) || STOCKS[t].name.toUpperCase().includes(v)).slice(0, 6)
+      : []
+    );
+  };
+
+  const pick = (t) => {
+    setTicker(t);
+    setNav("chart");
+    setVal("");
+    setSugg([]);
+  };
+
+  const onSubmit = (e) => {
+    e.preventDefault();
+    const t = val.trim().toUpperCase();
+    if (t.length >= 2) pick(t);
+  };
+
+  return (
+    <div style={{ position: "relative", flexShrink: 0 }}>
+      <form onSubmit={onSubmit} style={{ display: "flex", gap: 0 }}>
+        <input
+          value={val}
+          onChange={onChange}
+          onBlur={() => setTimeout(() => setSugg([]), 180)}
+          placeholder={ticker || "Mã CK..."}
+          maxLength={6}
+          style={{
+            width: 96, padding: "4px 8px", fontSize: 11,
+            background: "var(--bg-card)", border: "1px solid var(--border-hi)",
+            borderRight: "none", color: "var(--text-primary)",
+            borderRadius: "3px 0 0 3px", fontFamily: "inherit", outline: "none",
+          }}
+        />
+        <button type="submit" style={{
+          padding: "4px 8px", fontSize: 11, fontWeight: 700,
+          background: "var(--blue)", color: "#0a0e1a",
+          border: "none", borderRadius: "0 3px 3px 0",
+          cursor: "pointer", fontFamily: "inherit",
+        }}>↵</button>
+      </form>
+
+      {sugg.length > 0 && (
+        <div style={{
+          position: "absolute", top: "100%", left: 0, zIndex: 500,
+          background: "#111828", border: "1px solid var(--border-hi)",
+          borderRadius: 4, minWidth: 200, marginTop: 2,
+          boxShadow: "0 8px 24px #000000aa",
+        }}>
+          {sugg.map(t => (
+            <div key={t} onMouseDown={() => pick(t)} style={{
+              padding: "6px 10px", cursor: "pointer", fontSize: 11,
+              display: "flex", gap: 8, alignItems: "center",
+              borderBottom: "1px solid var(--border)",
+            }}
+              onMouseEnter={e => e.currentTarget.style.background = "var(--bg-hover)"}
+              onMouseLeave={e => e.currentTarget.style.background = ""}
+            >
+              <span style={{ color: "var(--blue)", fontWeight: 700, minWidth: 36 }}>{t}</span>
+              <span style={{ color: "var(--text-muted)", fontSize: 10, flex: 1 }}>{STOCKS[t]?.name?.slice(0,24)}</span>
+              <span style={{ color: "var(--text-dim)", fontSize: 9 }}>{STOCKS[t]?.exchange}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── TOPBAR TICKER INFO — giá + OHLCV của mã đang xem ─────────────────────────
+function TopbarTickerInfo({ ticker, stockCache, rsiVal }) {
+  const d = stockCache[ticker];
+  if (!d || d.length < 2) return (
+    <span style={{ fontSize: 10, color: "var(--text-dim)" }}>đang tải {ticker}...</span>
+  );
+  const last = d[d.length - 1];
+  const prev = d[d.length - 2];
+  const chg  = ((last.close - prev.close) / prev.close) * 100;
+  const bull = chg >= 0;
+
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11, fontFamily: "monospace", overflow: "hidden" }}>
+      {/* Tên mã + giá */}
+      <span style={{ color: "var(--blue)", fontWeight: 700, flexShrink: 0 }}>{ticker}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: bull ? "var(--green)" : "var(--red)", flexShrink: 0 }}>
+        {last.close.toFixed(2)}
+      </span>
+      <span style={{ color: bull ? "var(--green)" : "var(--red)", fontWeight: 700, flexShrink: 0 }}>
+        {bull ? "▲" : "▼"}{Math.abs(chg).toFixed(2)}%
+      </span>
+      <span style={{ color: "var(--border-hi)", flexShrink: 0 }}>│</span>
+      {/* OHLCV */}
+      <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>O</span>
+      <span style={{ color: "#e8f0f8", flexShrink: 0 }}>{last.open.toFixed(2)}</span>
+      <span style={{ color: "var(--green)", flexShrink: 0 }}>H {last.high.toFixed(2)}</span>
+      <span style={{ color: "var(--red)", flexShrink: 0 }}>L {last.low.toFixed(2)}</span>
+      <span style={{ color: "var(--yellow)", flexShrink: 0 }}>
+        V {(last.volume/1e6).toFixed(2)}M
+      </span>
+      {rsiVal != null && (
+        <>
+          <span style={{ color: "var(--border-hi)", flexShrink: 0 }}>│</span>
+          <span style={{ color: "var(--text-muted)", flexShrink: 0 }}>RSI</span>
+          <span style={{
+            color: rsiVal > 70 ? "var(--red)" : rsiVal < 30 ? "var(--green)" : "var(--purple)",
+            fontWeight: 700, flexShrink: 0
+          }}>{rsiVal.toFixed(1)}</span>
+        </>
+      )}
+      <span style={{ color: "var(--text-dim)", fontSize: 10, flexShrink: 0 }}>
+        {last.date}
+      </span>
+    </div>
+  );
+}
+
 // ── ROOT APP ──────────────────────────────────────────────────────────────────
 export default function Home() {
   const [nav,       setNav]       = useState("chart");
@@ -782,6 +909,11 @@ export default function Home() {
   const vnChg  = vnLast && vnPrev ? ((vnLast.close - vnPrev.close) / vnPrev.close) * 100 : 0;
 
   const liveCnt = Object.values(sourceMap).filter((s) => s === "tcbs").length;
+
+  // RSI của mã hiện tại để hiển thị trên topbar
+  const _topbarData = stockCache[ticker] || [];
+  const _topbarRSI  = _topbarData.length > 14 ? calcRSI(_topbarData) : [];
+  const rsiVal      = _topbarRSI[_topbarRSI.length - 1] ?? null;
   const mockCnt = Object.values(sourceMap).filter((s) => s === "mock").length;
 
   return (
@@ -802,52 +934,54 @@ export default function Home() {
           display: "flex", alignItems: "center", justifyContent: "space-between",
           flexShrink: 0, gap: 12,
         }}>
-          {/* Logo */}
-          <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-            <div style={{
-              width: 7, height: 7, borderRadius: "50%",
-              background: "var(--green)",
-              animation: "pulse-dot 2s ease-in-out infinite",
-            }} />
-            <span style={{ fontSize: 14, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>VN</span>
-            <span style={{ fontSize: 14, color: "var(--green)" }}>TRADE</span>
-          </div>
+          {/* ── LEFT: Logo + Ô nhập mã + VNINDEX + Giá mã hiện tại ── */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flex: 1, minWidth: 0, overflow: "hidden" }}>
 
-          {/* VN-Index + giá nhanh 5 mã */}
-          <div style={{ fontSize: 11, flexShrink: 0, display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
-            <span style={{ color: "var(--text-muted)", fontWeight: 600 }}>VNINDEX</span>
-            <span style={{ color: "#fff", fontWeight: 700 }}>{vnLast?.close.toFixed(2) ?? "···"}</span>
-            {vnLast && (
-              <span style={{ color: vnChg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
-                {vnChg >= 0 ? "▲" : "▼"}{Math.abs(vnChg).toFixed(2)}%
+            {/* Logo */}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+              <div style={{
+                width: 7, height: 7, borderRadius: "50%",
+                background: "var(--green)",
+                animation: "pulse-live 2s ease-in-out infinite",
+              }} />
+              <span style={{ fontSize: 13, fontWeight: 700, color: "#fff", letterSpacing: 1 }}>VN</span>
+              <span style={{ fontSize: 13, color: "var(--green)" }}>TRADE</span>
+            </div>
+
+            {/* Ô nhập mã — ngay cạnh logo */}
+            <TopbarSearch ticker={ticker} setTicker={setTicker} setNav={setNav} />
+
+            {/* Separator */}
+            <span style={{ color: "var(--border-hi)", flexShrink: 0 }}>│</span>
+
+            {/* VNINDEX */}
+            <div style={{ display: "flex", alignItems: "center", gap: 5, flexShrink: 0 }}>
+              <span style={{ fontSize: 10, color: "var(--text-muted)", fontWeight: 600 }}>VNI</span>
+              <span style={{ fontSize: 12, color: "#fff", fontWeight: 700 }}>
+                {vnLast?.close.toFixed(2) ?? "···"}
               </span>
-            )}
-            <Badge source={vnSource} />
-            <span style={{ color: "var(--border-hi)" }}>│</span>
-            {["FPT","VCB","HPG","BID","DGC"].map(t => {
-              const d = stockCache[t];
-              if (!d || d.length < 2) return null;
-              const la = d[d.length-1], pv = d[d.length-2];
-              const ch = ((la.close-pv.close)/pv.close)*100;
-              return (
-                <button key={t} onClick={() => { setNav("chart"); }}
-                  style={{ background:"none", border:"none", cursor:"pointer", padding:0, fontFamily:"inherit", display:"flex", gap:3, alignItems:"center" }}>
-                  <span style={{ color:"var(--text-muted)", fontSize:10 }}>{t}</span>
-                  <span style={{ color: ch>=0?"var(--green)":"var(--red)", fontSize:11, fontWeight:700 }}>
-                    {(la.close/1000).toFixed(1)}k
-                  </span>
-                </button>
-              );
-            })}
+              {vnLast && (
+                <span style={{ fontSize: 11, color: vnChg >= 0 ? "var(--green)" : "var(--red)", fontWeight: 700 }}>
+                  {vnChg >= 0 ? "▲" : "▼"}{Math.abs(vnChg).toFixed(2)}%
+                </span>
+              )}
+              <Badge source={vnSource} />
+            </div>
+
+            {/* Separator */}
+            <span style={{ color: "var(--border-hi)", flexShrink: 0 }}>│</span>
+
+            {/* Thông tin mã đang xem — O H L C V RSI */}
+            <TopbarTickerInfo ticker={ticker} stockCache={stockCache} rsiVal={rsiVal} />
           </div>
 
-          {/* Nav */}
-          <nav style={{ display: "flex", gap: 2 }}>
-            <NavBtn id="chart"    label="Chart"     active={nav === "chart"}    onClick={setNav} />
-            <NavBtn id="watchlist"label="Watchlist"  active={nav === "watchlist"} onClick={setNav} />
-            <NavBtn id="screener" label="Screener"   active={nav === "screener"}  onClick={setNav} />
-            <NavBtn id="scanner"  label="Scanner"    active={nav === "scanner"}  onClick={setNav} />
-            <NavBtn id="news"     label="Tin tức"   active={nav === "news"}     onClick={setNav} />
+          {/* ── RIGHT: Nav ── */}
+          <nav style={{ display: "flex", gap: 2, flexShrink: 0 }}>
+            <NavBtn id="chart"     label="Chart"     active={nav === "chart"}     onClick={setNav} />
+            <NavBtn id="watchlist" label="Watchlist"  active={nav === "watchlist"} onClick={setNav} />
+            <NavBtn id="screener"  label="Screener"   active={nav === "screener"}  onClick={setNav} />
+            <NavBtn id="scanner"   label="Scanner"    active={nav === "scanner"}   onClick={setNav} />
+            <NavBtn id="news"      label="News"       active={nav === "news"}      onClick={setNav} />
           </nav>
         </header>
 
